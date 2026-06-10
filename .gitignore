@@ -1,0 +1,28 @@
+# Private keys - NEVER commit
+*.key
+*.csr
+*.srl
+*.p12
+*.pfx
+
+# Certificates - NEVER commit
+*.pem
+
+# Config files with credentials
+opensearch.yml
+filebeat.yml
+opensearch_dashboards.yml
+
+# Logs
+*.log
+
+# Environment files
+.env
+*.password
+secrets*
+passwords*
+
+# System paths
+/etc/
+/tmp/
+/var/
