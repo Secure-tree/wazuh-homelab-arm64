@@ -1,0 +1,393 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>CyberKaushik SOC — Live Console</title>
+<style>
+  :root{
+    --bg:#05070d; --bg-2:#0a0e1a; --panel:#0d1320; --panel-2:#111a2c;
+    --border:#1e2a44; --border-hi:#2c3f6b;
+    --txt:#cfe1ff; --txt-dim:#7e90b5; --txt-mute:#4d5e83;
+    --cyan:#34e3ff; --cyan-dim:#1390a8;
+    --green:#00ff9c; --amber:#ffb547; --red:#ff5577; --violet:#b079ff;
+    --mono:'JetBrains Mono','SF Mono',ui-monospace,Menlo,monospace;
+    --sans:-apple-system,BlinkMacSystemFont,'Inter','Segoe UI',sans-serif;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html,body{background:var(--bg);color:var(--txt);font-family:var(--sans);min-height:100vh}
+  body{
+    background:
+      radial-gradient(1200px 600px at 10% -10%, rgba(52,227,255,.07), transparent 60%),
+      radial-gradient(900px 500px at 100% 0%, rgba(176,121,255,.05), transparent 60%),
+      var(--bg);
+  }
+  header{
+    display:flex;align-items:center;justify-content:space-between;
+    padding:14px 22px;border-bottom:1px solid var(--border);
+    background:linear-gradient(180deg,rgba(13,19,32,.95),rgba(5,7,13,.85));
+    position:sticky;top:0;z-index:10;backdrop-filter:blur(6px);
+  }
+  .brand{display:flex;align-items:center;gap:12px}
+  .brand .logo{
+    width:30px;height:30px;border:1.5px solid var(--cyan);border-radius:6px;
+    display:grid;place-items:center;color:var(--cyan);font-family:var(--mono);font-weight:700;
+    box-shadow:0 0 18px rgba(52,227,255,.25),inset 0 0 12px rgba(52,227,255,.15);
+  }
+  .brand h1{font-size:15px;font-weight:600;letter-spacing:.5px}
+  .brand small{color:var(--txt-mute);font-family:var(--mono);font-size:11px;display:block}
+  .status{display:flex;align-items:center;gap:14px;font-family:var(--mono);font-size:12px}
+  .dot{width:8px;height:8px;border-radius:50%;background:var(--txt-mute);box-shadow:0 0 0 0 transparent;transition:.3s}
+  .dot.ok{background:var(--green);box-shadow:0 0 10px var(--green)}
+  .dot.bad{background:var(--red);box-shadow:0 0 10px var(--red)}
+  .dot.warn{background:var(--amber);box-shadow:0 0 10px var(--amber)}
+  .pill{padding:4px 10px;border:1px solid var(--border);border-radius:999px;color:var(--txt-dim)}
+
+  main{padding:18px;display:grid;gap:14px;grid-template-columns:repeat(12,1fr)}
+  .panel{
+    background:linear-gradient(180deg,var(--panel),var(--panel-2));
+    border:1px solid var(--border);border-radius:10px;overflow:hidden;
+    box-shadow:0 1px 0 rgba(255,255,255,.02), 0 10px 30px rgba(0,0,0,.35);
+    display:flex;flex-direction:column;min-height:280px;
+  }
+  .panel header{
+    background:transparent;border-bottom:1px solid var(--border);
+    padding:10px 14px;position:static;backdrop-filter:none;
+  }
+  .panel h2{font-size:11px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--cyan);font-family:var(--mono)}
+  .panel .meta{font-family:var(--mono);font-size:10px;color:var(--txt-mute)}
+  .body{padding:14px;flex:1;overflow:auto;font-family:var(--mono);font-size:12px;line-height:1.55}
+  .body::-webkit-scrollbar{width:6px;height:6px}
+  .body::-webkit-scrollbar-thumb{background:var(--border-hi);border-radius:3px}
+
+  .span-3{grid-column:span 3}.span-4{grid-column:span 4}.span-6{grid-column:span 6}
+  .span-8{grid-column:span 8}.span-12{grid-column:span 12}
+  @media (max-width:1100px){.span-3,.span-4{grid-column:span 6}.span-6,.span-8{grid-column:span 12}}
+
+  .kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+  .kpi{background:rgba(0,0,0,.25);border:1px solid var(--border);border-radius:8px;padding:12px}
+  .kpi .v{font-family:var(--mono);font-size:24px;font-weight:600;color:var(--cyan)}
+  .kpi .k{font-size:10px;color:var(--txt-mute);text-transform:uppercase;letter-spacing:1px;margin-top:4px}
+  .kpi.green .v{color:var(--green)} .kpi.amber .v{color:var(--amber)} .kpi.red .v{color:var(--red)} .kpi.violet .v{color:var(--violet)}
+
+  table{width:100%;border-collapse:collapse;font-family:var(--mono);font-size:12px}
+  th,td{padding:6px 8px;text-align:left;border-bottom:1px dashed var(--border)}
+  th{color:var(--txt-mute);font-weight:500;text-transform:uppercase;font-size:10px;letter-spacing:1px}
+  tr:hover td{background:rgba(52,227,255,.04)}
+
+  .sev{display:inline-block;padding:1px 7px;border-radius:4px;font-size:10px;font-weight:600;font-family:var(--mono)}
+  .sev-low{background:rgba(0,255,156,.12);color:var(--green)}
+  .sev-med{background:rgba(255,181,71,.14);color:var(--amber)}
+  .sev-hi{background:rgba(255,85,119,.16);color:var(--red)}
+  .sev-crit{background:rgba(176,121,255,.18);color:var(--violet)}
+
+  .badge{display:inline-block;padding:1px 7px;border-radius:4px;font-size:10px;font-family:var(--mono);border:1px solid var(--border)}
+  .badge.ok{color:var(--green);border-color:rgba(0,255,156,.4)}
+  .badge.bad{color:var(--red);border-color:rgba(255,85,119,.4)}
+  .badge.warn{color:var(--amber);border-color:rgba(255,181,71,.4)}
+
+  .empty{color:var(--txt-mute);font-style:italic;padding:18px;text-align:center}
+  .err{color:var(--red);border-left:2px solid var(--red);padding:8px 12px;background:rgba(255,85,119,.05);margin:6px 0;font-size:11px}
+  .stale{color:var(--amber);font-size:10px;text-transform:uppercase;letter-spacing:1px;font-family:var(--mono)}
+  .log{white-space:pre-wrap;word-break:break-word;color:var(--txt-dim);border-left:2px solid var(--border);padding:4px 10px;margin:4px 0}
+  .log .ts{color:var(--cyan-dim);margin-right:8px}
+  .log .agent{color:var(--violet);margin-right:8px}
+  footer{padding:12px 22px;border-top:1px solid var(--border);color:var(--txt-mute);font-family:var(--mono);font-size:11px;display:flex;justify-content:space-between}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand">
+    <div class="logo">K</div>
+    <div>
+      <h1>CyberKaushik SOC</h1>
+      <small>LIVE CONSOLE · localhost:5001</small>
+    </div>
+  </div>
+  <div class="status">
+    <span class="pill"><span id="proxy-dot" class="dot"></span> &nbsp;PROXY</span>
+    <span class="pill"><span id="wazuh-dot" class="dot"></span> &nbsp;WAZUH</span>
+    <span class="pill"><span id="os-dot" class="dot"></span> &nbsp;OPENSEARCH</span>
+    <span class="pill" id="last-tick">—</span>
+  </div>
+</header>
+
+<main>
+
+  <section class="panel span-12">
+    <header>
+      <h2>· Overview</h2>
+      <span class="meta" id="kpi-meta">awaiting first poll…</span>
+    </header>
+    <div class="body">
+      <div class="kpis">
+        <div class="kpi"><div class="v" id="kpi-agents">—</div><div class="k">Agents</div></div>
+        <div class="kpi green"><div class="v" id="kpi-active">—</div><div class="k">Active</div></div>
+        <div class="kpi red"><div class="v" id="kpi-alerts">—</div><div class="k">Alerts (24h sample)</div></div>
+        <div class="kpi violet"><div class="v" id="kpi-rules">—</div><div class="k">Rules loaded</div></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="panel span-6" id="p-agents">
+    <header><h2>· Agents</h2><span class="meta" data-meta></span></header>
+    <div class="body" data-body></div>
+  </section>
+
+  <section class="panel span-6" id="p-alerts">
+    <header><h2>· Recent Alerts</h2><span class="meta" data-meta></span></header>
+    <div class="body" data-body></div>
+  </section>
+
+  <section class="panel span-6" id="p-rules">
+    <header><h2>· Rules</h2><span class="meta" data-meta></span></header>
+    <div class="body" data-body></div>
+  </section>
+
+  <section class="panel span-6" id="p-logs">
+    <header><h2>· Live Logs (OpenSearch)</h2><span class="meta" data-meta></span></header>
+    <div class="body" data-body></div>
+  </section>
+
+  <section class="panel span-4" id="p-compliance">
+    <header><h2>· Compliance (SCA)</h2><span class="meta" data-meta></span></header>
+    <div class="body" data-body></div>
+  </section>
+
+  <section class="panel span-4" id="p-threat-intel">
+    <header><h2>· Threat Intel (Vuln)</h2><span class="meta" data-meta></span></header>
+    <div class="body" data-body></div>
+  </section>
+
+  <section class="panel span-4" id="p-soar">
+    <header><h2>· SOAR / Active Response</h2><span class="meta" data-meta></span></header>
+    <div class="body" data-body></div>
+  </section>
+
+</main>
+
+<footer>
+  <span id="footer-status">Polling /api/* every 10s · graceful fallback enabled</span>
+  <span>CyberKaushik · Home Lab SOC</span>
+</footer>
+
+<script>
+const API = 'http://localhost:5001/api';
+const POLL_MS = 10000;
+const CACHE = {};
+
+const fmtTs = t => {
+  try { return new Date(t).toLocaleTimeString('en-GB'); } catch { return String(t); }
+};
+const severity = lvl => {
+  const n = Number(lvl) || 0;
+  if (n >= 12) return ['crit','CRIT'];
+  if (n >= 8)  return ['hi','HIGH'];
+  if (n >= 4)  return ['med','MED'];
+  return ['low','LOW'];
+};
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+async function fetchJson(path){
+  const r = await fetch(API + path, {cache:'no-store'});
+  const j = await r.json().catch(() => ({error:'invalid json'}));
+  if (!r.ok || j.error) throw new Error(j.error || j.detail || ('HTTP ' + r.status));
+  return j;
+}
+
+function setStatusDot(id, state){
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.classList.remove('ok','bad','warn');
+  if (state) el.classList.add(state);
+}
+
+function panelRender(id, html, opts={}){
+  const sec = document.getElementById(id);
+  const body = sec.querySelector('[data-body]');
+  const meta = sec.querySelector('[data-meta]');
+  body.innerHTML = html;
+  meta.innerHTML = opts.meta || '';
+  if (opts.stale) meta.innerHTML += ' <span class="stale">· last known</span>';
+}
+
+function panelError(id, err){
+  const sec = document.getElementById(id);
+  const cached = CACHE[id];
+  if (cached){
+    const body = sec.querySelector('[data-body]');
+    const meta = sec.querySelector('[data-meta]');
+    body.innerHTML = `<div class="err">offline · ${esc(err.message)}</div>` + cached.html;
+    meta.innerHTML = (cached.meta||'') + ' <span class="stale">· last known</span>';
+  } else {
+    panelRender(id, `<div class="err">offline · ${esc(err.message)}</div><div class="empty">no cached data yet</div>`,{meta:'—'});
+  }
+}
+
+function cache(id, html, meta){ CACHE[id] = {html, meta}; }
+
+// ---- Renderers ----
+function renderAgents(j){
+  const items = j?.data?.affected_items || j?.affected_items || [];
+  if (!items.length) return ['<div class="empty">no agents</div>', 'count=0', 0, 0];
+  const active = items.filter(a => (a.status||'').toLowerCase() === 'active').length;
+  const rows = items.map(a => {
+    const ok = (a.status||'').toLowerCase() === 'active';
+    return `<tr>
+      <td>${esc(a.id)}</td>
+      <td>${esc(a.name)}</td>
+      <td>${esc(a.ip||a.registerIP||'-')}</td>
+      <td>${esc(a.os?.name||a.os?.platform||'-')}</td>
+      <td><span class="badge ${ok?'ok':'bad'}">${esc(a.status||'?')}</span></td>
+    </tr>`;
+  }).join('');
+  const html = `<table><thead><tr><th>ID</th><th>Name</th><th>IP</th><th>OS</th><th>Status</th></tr></thead><tbody>${rows}</tbody></table>`;
+  return [html, `${items.length} agents · ${active} active`, items.length, active];
+}
+
+function renderAlertsTable(j){
+  const hits = j?.hits?.hits || [];
+  if (!hits.length) return ['<div class="empty">no alerts</div>', 'hits=0', 0];
+  const rows = hits.slice(0,20).map(h => {
+    const s = h._source || {};
+    const r = s.rule || {};
+    const [cls,lbl] = severity(r.level);
+    return `<tr>
+      <td>${esc(fmtTs(s['@timestamp']||s.timestamp))}</td>
+      <td><span class="sev sev-${cls}">${lbl} · ${esc(r.level||'?')}</span></td>
+      <td>${esc(r.id||'-')}</td>
+      <td>${esc(s.agent?.name || s.agent?.id || '-')}</td>
+      <td title="${esc(r.description||'')}">${esc((r.description||'').slice(0,80))}</td>
+    </tr>`;
+  }).join('');
+  const html = `<table><thead><tr><th>Time</th><th>Sev</th><th>Rule</th><th>Agent</th><th>Description</th></tr></thead><tbody>${rows}</tbody></table>`;
+  return [html, `${hits.length} hits`, hits.length];
+}
+
+function renderRules(j){
+  const items = j?.data?.affected_items || [];
+  if (!items.length) return ['<div class="empty">no rules</div>', 'count=0', 0];
+  const rows = items.map(r => {
+    const [cls,lbl] = severity(r.level);
+    return `<tr>
+      <td>${esc(r.id)}</td>
+      <td><span class="sev sev-${cls}">${lbl}</span></td>
+      <td>${esc((r.groups||[]).join(', '))}</td>
+      <td>${esc((r.description||'').slice(0,90))}</td>
+    </tr>`;
+  }).join('');
+  const html = `<table><thead><tr><th>ID</th><th>Lvl</th><th>Groups</th><th>Description</th></tr></thead><tbody>${rows}</tbody></table>`;
+  return [html, `${items.length} rules`, items.length];
+}
+
+function renderLogs(j){
+  const hits = j?.hits?.hits || [];
+  if (!hits.length) return ['<div class="empty">no log entries</div>', 'hits=0'];
+  const blocks = hits.slice(0,50).map(h => {
+    const s = h._source || {};
+    const msg = s.full_log || s.message || JSON.stringify(s).slice(0,200);
+    return `<div class="log"><span class="ts">${esc(fmtTs(s['@timestamp']||s.timestamp))}</span><span class="agent">${esc(s.agent?.name||'-')}</span>${esc(msg).slice(0,260)}</div>`;
+  }).join('');
+  return [blocks, `${hits.length} entries`];
+}
+
+function renderCompliance(j){
+  const items = j?.data?.affected_items || [];
+  if (!items.length) return ['<div class="empty">no SCA results</div>', 'count=0'];
+  const rows = items.slice(0,20).map(c => {
+    const pct = c.score ?? c.pass_score ?? '-';
+    return `<tr>
+      <td>${esc(c.policy_id||c.name||'-')}</td>
+      <td>${esc(c.pass||'-')}/${esc(c.fail||'-')}</td>
+      <td><span class="sev ${Number(pct)>=80?'sev-low':Number(pct)>=50?'sev-med':'sev-hi'}">${esc(pct)}%</span></td>
+    </tr>`;
+  }).join('');
+  const html = `<table><thead><tr><th>Policy</th><th>Pass/Fail</th><th>Score</th></tr></thead><tbody>${rows}</tbody></table>`;
+  return [html, `${items.length} policies`];
+}
+
+function renderThreats(j){
+  const items = j?.data?.affected_items || [];
+  if (!items.length) return ['<div class="empty">no vulnerabilities</div>', 'count=0'];
+  const rows = items.slice(0,20).map(v => {
+    const sev = (v.severity||'').toLowerCase();
+    const cls = sev.includes('crit')?'sev-crit':sev.includes('high')?'sev-hi':sev.includes('med')?'sev-med':'sev-low';
+    return `<tr>
+      <td>${esc(v.cve||'-')}</td>
+      <td><span class="sev ${cls}">${esc(v.severity||'?')}</span></td>
+      <td>${esc(v.name||v.title||'-')}</td>
+    </tr>`;
+  }).join('');
+  const html = `<table><thead><tr><th>CVE</th><th>Sev</th><th>Package</th></tr></thead><tbody>${rows}</tbody></table>`;
+  return [html, `${items.length} CVEs`];
+}
+
+function renderSoar(j){
+  const items = j?.data?.affected_items || [];
+  if (!items.length) return ['<div class="empty">no active-response commands</div>', 'count=0'];
+  const rows = items.slice(0,20).map(ar => `<tr>
+    <td>${esc(ar.command||ar.name||'-')}</td>
+    <td>${esc((ar.timeout_allowed??'-')+'')}</td>
+    <td>${esc((ar.executable||'-').toString().slice(0,40))}</td>
+  </tr>`).join('');
+  const html = `<table><thead><tr><th>Command</th><th>Timeout</th><th>Executable</th></tr></thead><tbody>${rows}</tbody></table>`;
+  return [html, `${items.length} responses`];
+}
+
+// ---- Polling ----
+async function poll(){
+  document.getElementById('last-tick').textContent = 'tick · ' + new Date().toLocaleTimeString('en-GB');
+
+  // Health first → drives status dots
+  let healthy = false, wazuhUp = false, osUp = false;
+  try {
+    const h = await fetchJson('/health');
+    healthy = true; wazuhUp = h.auth === 'success';
+  } catch { healthy = false; }
+  setStatusDot('proxy-dot', healthy ? 'ok' : 'bad');
+  setStatusDot('wazuh-dot', wazuhUp ? 'ok' : 'bad');
+
+  const calls = [
+    ['/agents',       'p-agents',       renderAgents],
+    ['/alerts',       'p-alerts',       renderAlertsTable],
+    ['/rules',        'p-rules',        renderRules],
+    ['/logs',         'p-logs',         renderLogs],
+    ['/compliance',   'p-compliance',   renderCompliance],
+    ['/threat-intel', 'p-threat-intel', renderThreats],
+    ['/soar',         'p-soar',         renderSoar],
+  ];
+
+  let kpiAgents='—', kpiActive='—', kpiAlerts='—', kpiRules='—';
+  let osOk = false;
+
+  await Promise.all(calls.map(async ([path, id, fn]) => {
+    try {
+      const j = await fetchJson(path);
+      const out = fn(j);
+      const html = out[0], meta = out[1];
+      panelRender(id, html, {meta});
+      cache(id, html, meta);
+      if (id === 'p-agents'){ kpiAgents = out[2]; kpiActive = out[3]; }
+      if (id === 'p-alerts'){ kpiAlerts = out[2]; osOk = true; }
+      if (id === 'p-logs')  { osOk = true; }
+      if (id === 'p-rules') { kpiRules = out[2]; }
+    } catch (e){
+      panelError(id, e);
+    }
+  }));
+
+  setStatusDot('os-dot', osOk ? 'ok' : 'bad');
+
+  document.getElementById('kpi-agents').textContent  = kpiAgents;
+  document.getElementById('kpi-active').textContent  = kpiActive;
+  document.getElementById('kpi-alerts').textContent  = kpiAlerts;
+  document.getElementById('kpi-rules').textContent   = kpiRules;
+  document.getElementById('kpi-meta').textContent    = 'updated ' + new Date().toLocaleString();
+}
+
+poll();
+setInterval(poll, POLL_MS);
+</script>
+</body>
+</html>
