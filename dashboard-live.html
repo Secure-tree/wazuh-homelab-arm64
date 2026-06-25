@@ -3,191 +3,400 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>CyberKaushik SOC — Live Console</title>
+<title>CyberKaushik SOC — Console</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
   :root{
-    --bg:#05070d; --bg-2:#0a0e1a; --panel:#0d1320; --panel-2:#111a2c;
-    --border:#1e2a44; --border-hi:#2c3f6b;
-    --txt:#cfe1ff; --txt-dim:#7e90b5; --txt-mute:#4d5e83;
-    --cyan:#34e3ff; --cyan-dim:#1390a8;
-    --green:#00ff9c; --amber:#ffb547; --red:#ff5577; --violet:#b079ff;
-    --mono:'JetBrains Mono','SF Mono',ui-monospace,Menlo,monospace;
-    --sans:-apple-system,BlinkMacSystemFont,'Inter','Segoe UI',sans-serif;
+    --bg:#0A0E1A;
+    --panel:#0D1320;
+    --panel-2:#111A2C;
+    --panel-3:#0A1124;
+    --border:#1A2540;
+    --border-hi:#243358;
+    --txt:#EAF1FA;
+    --txt-dim:#8B98AB;
+    --txt-mute:#5A6A85;
+    --cyan:#00E5FF;
+    --cyan-2:#34E3FF;
+    --cyan-dim:#0E7A8C;
+    --blue:#2D7FFF;
+    --green:#00FF9C;
+    --green-dim:#1E8862;
+    --amber:#FFB547;
+    --amber-dim:#8A6020;
+    --red:#FF5577;
+    --red-dim:#7A2032;
+    --violet:#B079FF;
+    --display:'Space Grotesk','IBM Plex Sans',system-ui,sans-serif;
+    --sans:'IBM Plex Sans',system-ui,-apple-system,sans-serif;
+    --mono:'JetBrains Mono','IBM Plex Mono',ui-monospace,Menlo,monospace;
   }
   *{margin:0;padding:0;box-sizing:border-box}
-  html,body{background:var(--bg);color:var(--txt);font-family:var(--sans);min-height:100vh}
-  body{
-    background:
-      radial-gradient(1200px 600px at 10% -10%, rgba(52,227,255,.07), transparent 60%),
-      radial-gradient(900px 500px at 100% 0%, rgba(176,121,255,.05), transparent 60%),
-      var(--bg);
+  html,body{height:100%;background:var(--bg);color:var(--txt);font-family:var(--sans);font-size:14px;-webkit-font-smoothing:antialiased}
+  ::-webkit-scrollbar{width:8px;height:8px}
+  ::-webkit-scrollbar-track{background:transparent}
+  ::-webkit-scrollbar-thumb{background:var(--border-hi);border-radius:4px}
+  ::-webkit-scrollbar-thumb:hover{background:#2f4474}
+
+  /* ===== Layout ===== */
+  .app{display:grid;grid-template-columns:240px 1fr;height:100vh;overflow:hidden}
+
+  /* ===== Sidebar ===== */
+  aside{
+    background:var(--panel);border-right:1px solid var(--border);
+    display:flex;flex-direction:column;padding:18px 14px;
   }
-  header{
-    display:flex;align-items:center;justify-content:space-between;
-    padding:14px 22px;border-bottom:1px solid var(--border);
-    background:linear-gradient(180deg,rgba(13,19,32,.95),rgba(5,7,13,.85));
-    position:sticky;top:0;z-index:10;backdrop-filter:blur(6px);
-  }
-  .brand{display:flex;align-items:center;gap:12px}
+  .brand{display:flex;align-items:center;gap:10px;padding:4px 6px 18px}
   .brand .logo{
-    width:30px;height:30px;border:1.5px solid var(--cyan);border-radius:6px;
-    display:grid;place-items:center;color:var(--cyan);font-family:var(--mono);font-weight:700;
-    box-shadow:0 0 18px rgba(52,227,255,.25),inset 0 0 12px rgba(52,227,255,.15);
+    width:34px;height:34px;border-radius:8px;
+    background:linear-gradient(135deg,#0d1320,#1a2540);
+    border:1px solid var(--cyan-dim);
+    display:grid;place-items:center;color:var(--cyan);
+    box-shadow:0 0 16px rgba(0,229,255,.18),inset 0 0 10px rgba(0,229,255,.1);
   }
-  .brand h1{font-size:15px;font-weight:600;letter-spacing:.5px}
-  .brand small{color:var(--txt-mute);font-family:var(--mono);font-size:11px;display:block}
-  .status{display:flex;align-items:center;gap:14px;font-family:var(--mono);font-size:12px}
-  .dot{width:8px;height:8px;border-radius:50%;background:var(--txt-mute);box-shadow:0 0 0 0 transparent;transition:.3s}
-  .dot.ok{background:var(--green);box-shadow:0 0 10px var(--green)}
-  .dot.bad{background:var(--red);box-shadow:0 0 10px var(--red)}
-  .dot.warn{background:var(--amber);box-shadow:0 0 10px var(--amber)}
-  .pill{padding:4px 10px;border:1px solid var(--border);border-radius:999px;color:var(--txt-dim)}
+  .brand .logo svg{width:18px;height:18px}
+  .brand .name{font-family:var(--display);font-weight:700;font-size:15px;letter-spacing:.3px}
+  .brand .tag{display:block;font-family:var(--mono);font-size:9.5px;color:var(--txt-mute);letter-spacing:1.5px;margin-top:1px}
 
-  main{padding:18px;display:grid;gap:14px;grid-template-columns:repeat(12,1fr)}
+  nav{display:flex;flex-direction:column;gap:2px;flex:1;margin-top:6px}
+  nav .section{font-family:var(--mono);font-size:10px;letter-spacing:1.8px;color:var(--txt-mute);padding:18px 12px 6px;text-transform:uppercase}
+  nav button{
+    display:flex;align-items:center;gap:12px;width:100%;
+    background:transparent;border:0;color:var(--txt-dim);cursor:pointer;
+    padding:9px 12px;border-radius:7px;font:500 13px/1 var(--sans);text-align:left;
+    transition:.15s background,.15s color;position:relative;
+  }
+  nav button:hover{background:#121b30;color:var(--txt)}
+  nav button.active{
+    background:linear-gradient(90deg,rgba(0,229,255,.13),rgba(0,229,255,.02));
+    color:var(--cyan);
+  }
+  nav button.active::before{
+    content:'';position:absolute;left:0;top:8px;bottom:8px;width:2px;border-radius:2px;background:var(--cyan);
+    box-shadow:0 0 8px var(--cyan);
+  }
+  nav button svg{width:16px;height:16px;flex:0 0 16px;opacity:.85}
+  nav button.active svg{opacity:1}
+  nav .badge{
+    margin-left:auto;background:var(--red);color:#2A0710;
+    font-family:var(--mono);font-size:10px;font-weight:700;
+    padding:1px 7px;border-radius:999px;min-width:22px;text-align:center;
+  }
+
+  .user{
+    margin-top:auto;display:flex;align-items:center;gap:10px;
+    background:var(--panel-3);border:1px solid var(--border);border-radius:9px;padding:9px 10px;
+  }
+  .user .avatar{
+    width:30px;height:30px;border-radius:7px;background:linear-gradient(135deg,#2d7fff,#0e7a8c);
+    display:grid;place-items:center;color:#fff;font-family:var(--mono);font-weight:700;font-size:12px;
+  }
+  .user .who{font-size:12px;font-weight:600}
+  .user .role{font-family:var(--mono);font-size:9.5px;color:var(--cyan);letter-spacing:1.2px}
+
+  /* ===== Main ===== */
+  main{display:flex;flex-direction:column;overflow:hidden}
+  .topbar{
+    display:flex;align-items:center;gap:14px;padding:12px 22px;
+    border-bottom:1px solid var(--border);background:rgba(13,19,32,.4);
+  }
+  .env{display:flex;align-items:center;gap:8px;font-family:var(--mono);font-size:11px;color:var(--txt-dim)}
+  .env .dot{width:8px;height:8px;border-radius:50%;background:var(--amber);box-shadow:0 0 8px var(--amber);transition:.3s}
+  .env .dot.ok{background:var(--green);box-shadow:0 0 8px var(--green)}
+  .env .dot.bad{background:var(--red);box-shadow:0 0 8px var(--red)}
+  .env b{color:var(--txt)}
+  .search{
+    flex:1;max-width:520px;display:flex;align-items:center;gap:8px;
+    background:#091126;border:1px solid var(--border);border-radius:8px;padding:7px 12px;
+    font-family:var(--mono);font-size:12px;color:var(--txt-dim);
+  }
+  .search input{background:transparent;border:0;color:var(--txt);font:inherit;flex:1;outline:none}
+  .search svg{width:13px;height:13px;opacity:.6}
+  .pill{
+    font-family:var(--mono);font-size:9.5px;font-weight:600;letter-spacing:1.2px;
+    padding:4px 9px;border-radius:5px;background:rgba(255,181,71,.13);color:var(--amber);
+    border:1px solid rgba(255,181,71,.3);text-transform:uppercase;
+  }
+  .toggle{
+    display:flex;align-items:center;gap:8px;font-family:var(--mono);font-size:11px;color:var(--txt-dim);
+  }
+  .toggle .sw{
+    width:36px;height:20px;background:var(--cyan);border-radius:10px;position:relative;
+    box-shadow:0 0 10px rgba(0,229,255,.4),inset 0 0 4px rgba(0,0,0,.2);
+  }
+  .toggle .sw::after{
+    content:'';position:absolute;top:2px;right:2px;width:16px;height:16px;border-radius:50%;background:#fff;
+  }
+  .toggle b{color:var(--txt);font-weight:500}
+  .clock{font-family:var(--mono);font-size:12px;color:var(--cyan);letter-spacing:1px;min-width:64px;text-align:right}
+
+  .view{flex:1;overflow:auto;padding:24px 28px}
+  .page-head{display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:22px;gap:20px;flex-wrap:wrap}
+  .page-head h1{font-family:var(--display);font-size:28px;font-weight:600;letter-spacing:.2px}
+  .page-head .sub{color:var(--txt-dim);font-size:13px;margin-top:4px}
+  .page-head .ver{font-family:var(--mono);font-size:11px;color:var(--txt-mute);letter-spacing:1.4px;text-transform:uppercase}
+  .page-head .ver b{color:var(--cyan)}
+
+  /* ===== Panels ===== */
+  .grid{display:grid;gap:14px}
   .panel{
-    background:linear-gradient(180deg,var(--panel),var(--panel-2));
-    border:1px solid var(--border);border-radius:10px;overflow:hidden;
-    box-shadow:0 1px 0 rgba(255,255,255,.02), 0 10px 30px rgba(0,0,0,.35);
-    display:flex;flex-direction:column;min-height:280px;
+    background:var(--panel);border:1px solid var(--border);border-radius:10px;overflow:hidden;
+    display:flex;flex-direction:column;
   }
-  .panel header{
-    background:transparent;border-bottom:1px solid var(--border);
-    padding:10px 14px;position:static;backdrop-filter:none;
+  .p-head{padding:14px 16px 6px;display:flex;align-items:center;justify-content:space-between;gap:10px}
+  .p-tag{font-family:var(--mono);font-size:10.5px;letter-spacing:1.8px;color:var(--cyan);font-weight:600}
+  .p-title{font-family:var(--display);font-weight:600;font-size:15px;margin-top:2px;color:var(--txt)}
+  .p-actions{display:flex;align-items:center;gap:8px}
+  .chip{
+    display:inline-flex;align-items:center;gap:6px;font-family:var(--mono);font-size:10px;font-weight:600;
+    letter-spacing:1.2px;padding:4px 9px;border-radius:5px;text-transform:uppercase;
+    background:rgba(0,229,255,.1);color:var(--cyan);border:1px solid rgba(0,229,255,.25);
   }
-  .panel h2{font-size:11px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--cyan);font-family:var(--mono)}
-  .panel .meta{font-family:var(--mono);font-size:10px;color:var(--txt-mute)}
-  .body{padding:14px;flex:1;overflow:auto;font-family:var(--mono);font-size:12px;line-height:1.55}
-  .body::-webkit-scrollbar{width:6px;height:6px}
-  .body::-webkit-scrollbar-thumb{background:var(--border-hi);border-radius:3px}
+  .chip.live::before{content:'';width:6px;height:6px;border-radius:50%;background:var(--cyan);box-shadow:0 0 6px var(--cyan);animation:pulse 1.8s infinite}
+  .chip.ghost{background:transparent;color:var(--txt-dim);border-color:var(--border)}
+  .chip.amber{background:rgba(255,181,71,.12);color:var(--amber);border-color:rgba(255,181,71,.3)}
+  .chip.green{background:rgba(0,255,156,.12);color:var(--green);border-color:rgba(0,255,156,.3)}
+  .chip.red{background:rgba(255,85,119,.12);color:var(--red);border-color:rgba(255,85,119,.3)}
+  .chip.violet{background:rgba(176,121,255,.12);color:var(--violet);border-color:rgba(176,121,255,.3)}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
 
-  .span-3{grid-column:span 3}.span-4{grid-column:span 4}.span-6{grid-column:span 6}
-  .span-8{grid-column:span 8}.span-12{grid-column:span 12}
-  @media (max-width:1100px){.span-3,.span-4{grid-column:span 6}.span-6,.span-8{grid-column:span 12}}
+  .p-body{padding:8px 16px 16px;flex:1;overflow:auto;min-height:0}
 
-  .kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
-  .kpi{background:rgba(0,0,0,.25);border:1px solid var(--border);border-radius:8px;padding:12px}
-  .kpi .v{font-family:var(--mono);font-size:24px;font-weight:600;color:var(--cyan)}
-  .kpi .k{font-size:10px;color:var(--txt-mute);text-transform:uppercase;letter-spacing:1px;margin-top:4px}
-  .kpi.green .v{color:var(--green)} .kpi.amber .v{color:var(--amber)} .kpi.red .v{color:var(--red)} .kpi.violet .v{color:var(--violet)}
+  /* ===== KPI cards ===== */
+  .kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
+  .kpi{
+    background:var(--panel);border:1px solid var(--border);border-radius:10px;
+    padding:16px 18px;display:flex;flex-direction:column;gap:10px;min-height:120px;
+  }
+  .kpi .k{font-family:var(--mono);font-size:10.5px;letter-spacing:1.8px;color:var(--txt-dim);text-transform:uppercase;line-height:1.3}
+  .kpi .v{font-family:var(--mono);font-size:36px;font-weight:700;line-height:1;color:var(--cyan);letter-spacing:-.5px}
+  .kpi .v small{font-size:14px;color:var(--txt-dim);font-weight:500;margin-left:4px}
+  .kpi .trend{font-family:var(--mono);font-size:11px;color:var(--green);display:flex;align-items:center;gap:4px}
+  .kpi.red .v{color:var(--red)} .kpi.green .v{color:var(--green)} .kpi.amber .v{color:var(--amber)} .kpi.violet .v{color:var(--violet)}
+  .kpi .trend.down{color:var(--red)}
 
+  /* ===== Tables ===== */
   table{width:100%;border-collapse:collapse;font-family:var(--mono);font-size:12px}
-  th,td{padding:6px 8px;text-align:left;border-bottom:1px dashed var(--border)}
-  th{color:var(--txt-mute);font-weight:500;text-transform:uppercase;font-size:10px;letter-spacing:1px}
-  tr:hover td{background:rgba(52,227,255,.04)}
+  thead th{
+    text-align:left;padding:10px 8px;color:var(--txt-mute);font-family:var(--mono);
+    font-weight:500;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;
+    border-bottom:1px solid var(--border);
+  }
+  tbody td{padding:11px 8px;border-bottom:1px solid var(--border);color:var(--txt-dim)}
+  tbody tr:hover td{background:rgba(0,229,255,.03);color:var(--txt)}
+  tbody tr:last-child td{border-bottom:0}
+  td.id{color:var(--txt-mute)}
+  td.cyan{color:var(--cyan);font-weight:600}
 
-  .sev{display:inline-block;padding:1px 7px;border-radius:4px;font-size:10px;font-weight:600;font-family:var(--mono)}
-  .sev-low{background:rgba(0,255,156,.12);color:var(--green)}
-  .sev-med{background:rgba(255,181,71,.14);color:var(--amber)}
-  .sev-hi{background:rgba(255,85,119,.16);color:var(--red)}
-  .sev-crit{background:rgba(176,121,255,.18);color:var(--violet)}
+  /* ===== Severity / status badges ===== */
+  .lvl{
+    display:inline-block;font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:.8px;
+    padding:3px 8px;border-radius:4px;border:1px solid;text-transform:uppercase;
+  }
+  .lvl-low{background:rgba(45,127,255,.12);color:var(--blue);border-color:rgba(45,127,255,.35)}
+  .lvl-med{background:rgba(255,181,71,.12);color:var(--amber);border-color:rgba(255,181,71,.4)}
+  .lvl-hi{background:rgba(255,85,119,.12);color:var(--red);border-color:rgba(255,85,119,.4)}
+  .lvl-crit{background:rgba(176,121,255,.12);color:var(--violet);border-color:rgba(176,121,255,.4)}
 
-  .badge{display:inline-block;padding:1px 7px;border-radius:4px;font-size:10px;font-family:var(--mono);border:1px solid var(--border)}
-  .badge.ok{color:var(--green);border-color:rgba(0,255,156,.4)}
-  .badge.bad{color:var(--red);border-color:rgba(255,85,119,.4)}
-  .badge.warn{color:var(--amber);border-color:rgba(255,181,71,.4)}
+  .status-dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:8px;vertical-align:middle}
+  .status-dot.active{background:var(--green);box-shadow:0 0 6px var(--green)}
+  .status-dot.disconnected{background:var(--txt-mute)}
+  .status-dot.pending{background:var(--amber);box-shadow:0 0 6px var(--amber)}
+  .status-dot.never{background:var(--red);box-shadow:0 0 6px var(--red)}
 
-  .empty{color:var(--txt-mute);font-style:italic;padding:18px;text-align:center}
-  .err{color:var(--red);border-left:2px solid var(--red);padding:8px 12px;background:rgba(255,85,119,.05);margin:6px 0;font-size:11px}
-  .stale{color:var(--amber);font-size:10px;text-transform:uppercase;letter-spacing:1px;font-family:var(--mono)}
-  .log{white-space:pre-wrap;word-break:break-word;color:var(--txt-dim);border-left:2px solid var(--border);padding:4px 10px;margin:4px 0}
-  .log .ts{color:var(--cyan-dim);margin-right:8px}
-  .log .agent{color:var(--violet);margin-right:8px}
-  footer{padding:12px 22px;border-top:1px solid var(--border);color:var(--txt-mute);font-family:var(--mono);font-size:11px;display:flex;justify-content:space-between}
+  /* ===== Bar chart ===== */
+  .bars{display:flex;align-items:flex-end;gap:5px;height:200px;padding:8px 0}
+  .bars .bar{
+    flex:1;background:linear-gradient(180deg,var(--cyan-2),var(--blue));
+    border-radius:3px 3px 0 0;min-height:4px;transition:height .4s;
+    box-shadow:0 0 8px rgba(0,229,255,.15);
+  }
+  .bars .bar.last{background:linear-gradient(180deg,#7af3ff,var(--cyan));box-shadow:0 0 14px rgba(0,229,255,.4)}
+  .bars-x{display:flex;justify-content:space-between;font-family:var(--mono);font-size:10px;color:var(--txt-mute);padding-top:8px;letter-spacing:1px}
+
+  /* ===== Bar list (Top rules) ===== */
+  .barlist{display:flex;flex-direction:column;gap:6px}
+  .barlist-row{display:grid;grid-template-columns:36px 80px 80px 1fr 60px;gap:14px;align-items:center;padding:9px 4px;border-bottom:1px dashed var(--border)}
+  .barlist-row:last-child{border-bottom:0}
+  .barlist-row .n{font-family:var(--mono);font-size:11px;color:var(--txt-mute)}
+  .barlist-row .rule{font-family:var(--mono);color:var(--cyan);font-size:13px;font-weight:600}
+  .barlist-row .bar-wrap{position:relative;height:8px;background:#0a1124;border-radius:4px;overflow:hidden}
+  .barlist-row .bar-fill{height:100%;background:linear-gradient(90deg,var(--blue),var(--cyan));border-radius:4px}
+  .barlist-row .count{font-family:var(--mono);font-size:12px;color:var(--txt);text-align:right;font-weight:600}
+
+  /* ===== Severity bars (triage) ===== */
+  .sev-row{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--border)}
+  .sev-row:last-child{border-bottom:0}
+  .sev-row .label{font-size:13px;color:var(--txt);display:flex;align-items:center;gap:10px}
+  .sev-row .dot{width:8px;height:8px;border-radius:50%}
+  .sev-row .count{font-family:var(--mono);font-size:18px;font-weight:600;color:var(--txt)}
+
+  /* ===== Live feed entries ===== */
+  .feed{display:flex;flex-direction:column;gap:0}
+  .feed-row{
+    display:grid;grid-template-columns:16px 80px 100px 60px 1fr;gap:12px;align-items:center;
+    padding:10px 4px;border-bottom:1px dashed var(--border);font-family:var(--mono);font-size:11.5px;
+  }
+  .feed-row:last-child{border-bottom:0}
+  .feed-row .dot{width:8px;height:8px;border-radius:50%}
+  .feed-row .ts{color:var(--txt-mute)}
+  .feed-row .msg{color:var(--txt-dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .feed-row:hover .msg{color:var(--txt)}
+
+  /* ===== Agent cards (fleet page) ===== */
+  .agent-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px}
+  .agent-card{
+    background:var(--panel-3);border:1px solid var(--border);border-radius:9px;padding:14px;
+    display:flex;flex-direction:column;gap:10px;
+  }
+  .agent-card .top{display:flex;justify-content:space-between;align-items:flex-start}
+  .agent-card .name{font-family:var(--mono);font-weight:700;font-size:14px;color:var(--txt)}
+  .agent-card .ip{font-family:var(--mono);font-size:11px;color:var(--txt-mute)}
+  .agent-card .os{font-family:var(--mono);font-size:11px;color:var(--txt-dim)}
+  .agent-card .meter{display:flex;flex-direction:column;gap:4px}
+  .agent-card .meter-label{display:flex;justify-content:space-between;font-family:var(--mono);font-size:10px;color:var(--txt-mute)}
+  .agent-card .meter-bar{height:5px;background:#0a1124;border-radius:3px;overflow:hidden}
+  .agent-card .meter-fill{height:100%;background:linear-gradient(90deg,var(--blue),var(--cyan));border-radius:3px}
+  .agent-card .meter-fill.warn{background:linear-gradient(90deg,var(--amber-dim),var(--amber))}
+  .agent-card .meter-fill.crit{background:linear-gradient(90deg,var(--red-dim),var(--red))}
+  .agent-card .foot{display:flex;justify-content:space-between;align-items:center;margin-top:auto}
+  .agent-card .ev{font-family:var(--mono);font-size:11px;color:var(--txt-dim)}
+
+  /* ===== Empty / error ===== */
+  .empty{padding:32px;text-align:center;color:var(--txt-mute);font-family:var(--mono);font-size:12px}
+  .err{
+    padding:8px 12px;margin:6px 0;font-family:var(--mono);font-size:11px;
+    color:var(--red);background:rgba(255,85,119,.06);border-left:2px solid var(--red);border-radius:0 4px 4px 0;
+  }
+  .stale{font-family:var(--mono);font-size:9.5px;letter-spacing:1.2px;color:var(--amber);text-transform:uppercase;margin-left:8px}
+
+  /* ===== Module-stub style for empty pages (matches original) ===== */
+  .stub{display:flex;flex-direction:column;align-items:center;justify-content:center;height:60vh;color:var(--txt-mute);gap:14px}
+  .stub svg{width:48px;height:48px;opacity:.5}
+  .stub h2{font-family:var(--display);font-weight:600;font-size:18px;color:var(--txt-dim)}
+  .stub p{font-family:var(--mono);font-size:12px}
+
+  /* ===== Span helpers ===== */
+  .col-6{grid-template-columns:repeat(6,1fr)}
+  .col-12{grid-template-columns:repeat(12,1fr)}
+  .span-3{grid-column:span 3}
+  .span-4{grid-column:span 4}
+  .span-5{grid-column:span 5}
+  .span-6{grid-column:span 6}
+  .span-7{grid-column:span 7}
+  .span-8{grid-column:span 8}
+  .span-9{grid-column:span 9}
+  .span-12{grid-column:span 12}
+
+  @media (max-width: 1100px){
+    .app{grid-template-columns:64px 1fr}
+    aside .brand .name,aside .brand .tag,aside nav .section,aside nav button span.lbl,aside .user .who,aside .user .role{display:none}
+    aside nav button{justify-content:center}
+    .kpis{grid-template-columns:repeat(2,1fr)}
+    .span-3,.span-4,.span-5,.span-6,.span-7,.span-8{grid-column:span 12}
+  }
 </style>
 </head>
 <body>
 
-<header>
-  <div class="brand">
-    <div class="logo">K</div>
-    <div>
-      <h1>CyberKaushik SOC</h1>
-      <small>LIVE CONSOLE · localhost:5001</small>
-    </div>
-  </div>
-  <div class="status">
-    <span class="pill"><span id="proxy-dot" class="dot"></span> &nbsp;PROXY</span>
-    <span class="pill"><span id="wazuh-dot" class="dot"></span> &nbsp;WAZUH</span>
-    <span class="pill"><span id="os-dot" class="dot"></span> &nbsp;OPENSEARCH</span>
-    <span class="pill" id="last-tick">—</span>
-  </div>
-</header>
+<div class="app">
 
-<main>
-
-  <section class="panel span-12">
-    <header>
-      <h2>· Overview</h2>
-      <span class="meta" id="kpi-meta">awaiting first poll…</span>
-    </header>
-    <div class="body">
-      <div class="kpis">
-        <div class="kpi"><div class="v" id="kpi-agents">—</div><div class="k">Agents</div></div>
-        <div class="kpi green"><div class="v" id="kpi-active">—</div><div class="k">Active</div></div>
-        <div class="kpi red"><div class="v" id="kpi-alerts">—</div><div class="k">Alerts (24h sample)</div></div>
-        <div class="kpi violet"><div class="v" id="kpi-rules">—</div><div class="k">Rules loaded</div></div>
+  <!-- ===== SIDEBAR ===== -->
+  <aside>
+    <div class="brand">
+      <div class="logo">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M3 12h4l3-8 4 16 3-8h4"/>
+        </svg>
+      </div>
+      <div>
+        <div class="name">CyberKaushik</div>
+        <span class="tag">SOC // WAZUH SIEM</span>
       </div>
     </div>
-  </section>
 
-  <section class="panel span-6" id="p-agents">
-    <header><h2>· Agents</h2><span class="meta" data-meta></span></header>
-    <div class="body" data-body></div>
-  </section>
+    <nav id="nav">
+      <button data-view="overview" class="active">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 13l9-9 9 9M5 12v8h14v-8"/></svg>
+        <span class="lbl">Overview</span>
+      </button>
+      <button data-view="alerts">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M12 7v6M12 16v.5"/></svg>
+        <span class="lbl">Alerts</span>
+        <span class="badge" id="badge-alerts">0</span>
+      </button>
+      <button data-view="agents">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="18" height="14" rx="2"/><path d="M8 20h8M12 18v2"/></svg>
+        <span class="lbl">Agents</span>
+      </button>
+      <button data-view="soar">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 9V5h4M19 9V5h-4M5 15v4h4M19 15v4h-4"/><circle cx="12" cy="12" r="3"/></svg>
+        <span class="lbl">SOAR</span>
+      </button>
 
-  <section class="panel span-6" id="p-alerts">
-    <header><h2>· Recent Alerts</h2><span class="meta" data-meta></span></header>
-    <div class="body" data-body></div>
-  </section>
+      <div class="section">// Monitor</div>
 
-  <section class="panel span-6" id="p-rules">
-    <header><h2>· Rules</h2><span class="meta" data-meta></span></header>
-    <div class="body" data-body></div>
-  </section>
+      <button data-view="threat">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3l8 4v5c0 5-3.5 8-8 9-4.5-1-8-4-8-9V7l8-4z"/></svg>
+        <span class="lbl">Threat Intel</span>
+      </button>
+      <button data-view="rules">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 11l3 3 7-7"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
+        <span class="lbl">Rules</span>
+      </button>
+      <button data-view="logs">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 17l5-5-5-5M12 19h8"/></svg>
+        <span class="lbl">Log Stream</span>
+      </button>
+      <button data-view="compliance">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M9 12l2 2 4-4"/></svg>
+        <span class="lbl">Compliance</span>
+      </button>
+    </nav>
 
-  <section class="panel span-6" id="p-logs">
-    <header><h2>· Live Logs (OpenSearch)</h2><span class="meta" data-meta></span></header>
-    <div class="body" data-body></div>
-  </section>
+    <div class="user">
+      <div class="avatar">RK</div>
+      <div>
+        <div class="who">r.kaushik</div>
+        <div class="role">SOC ANALYST · T2</div>
+      </div>
+    </div>
+  </aside>
 
-  <section class="panel span-4" id="p-compliance">
-    <header><h2>· Compliance (SCA)</h2><span class="meta" data-meta></span></header>
-    <div class="body" data-body></div>
-  </section>
+  <!-- ===== MAIN ===== -->
+  <main>
+    <div class="topbar">
+      <div class="env">
+        <span class="dot" id="env-dot"></span>
+        <span><b>homelab-soc</b> / prod</span>
+      </div>
+      <div class="search">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4"/></svg>
+        <input id="search" placeholder="rule.level:>=10 AND agent.name:*">
+      </div>
+      <span class="pill">LIVE DATA</span>
+      <div class="toggle"><span class="sw"></span><b>Live</b></div>
+      <div class="clock" id="clock">--:--:--</div>
+    </div>
 
-  <section class="panel span-4" id="p-threat-intel">
-    <header><h2>· Threat Intel (Vuln)</h2><span class="meta" data-meta></span></header>
-    <div class="body" data-body></div>
-  </section>
+    <div class="view" id="view"></div>
+  </main>
 
-  <section class="panel span-4" id="p-soar">
-    <header><h2>· SOAR / Active Response</h2><span class="meta" data-meta></span></header>
-    <div class="body" data-body></div>
-  </section>
-
-</main>
-
-<footer>
-  <span id="footer-status">Polling /api/* every 10s · graceful fallback enabled</span>
-  <span>CyberKaushik · Home Lab SOC</span>
-</footer>
+</div>
 
 <script>
+// ============================================================
+//   STATE + API
+// ============================================================
 const API = 'http://localhost:5001/api';
 const POLL_MS = 10000;
-const CACHE = {};
-
-const fmtTs = t => {
-  try { return new Date(t).toLocaleTimeString('en-GB'); } catch { return String(t); }
+const STATE = {
+  health:null, agents:null, alerts:null, rules:null, logs:null,
+  compliance:null, threats:null, soar:null,
+  errors:{}, currentView:'overview'
 };
-const severity = lvl => {
-  const n = Number(lvl) || 0;
-  if (n >= 12) return ['crit','CRIT'];
-  if (n >= 8)  return ['hi','HIGH'];
-  if (n >= 4)  return ['med','MED'];
-  return ['low','LOW'];
-};
-const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
 async function fetchJson(path){
   const r = await fetch(API + path, {cache:'no-store'});
@@ -196,198 +405,480 @@ async function fetchJson(path){
   return j;
 }
 
-function setStatusDot(id, state){
-  const el = document.getElementById(id);
-  if (!el) return;
-  el.classList.remove('ok','bad','warn');
-  if (state) el.classList.add(state);
-}
-
-function panelRender(id, html, opts={}){
-  const sec = document.getElementById(id);
-  const body = sec.querySelector('[data-body]');
-  const meta = sec.querySelector('[data-meta]');
-  body.innerHTML = html;
-  meta.innerHTML = opts.meta || '';
-  if (opts.stale) meta.innerHTML += ' <span class="stale">· last known</span>';
-}
-
-function panelError(id, err){
-  const sec = document.getElementById(id);
-  const cached = CACHE[id];
-  if (cached){
-    const body = sec.querySelector('[data-body]');
-    const meta = sec.querySelector('[data-meta]');
-    body.innerHTML = `<div class="err">offline · ${esc(err.message)}</div>` + cached.html;
-    meta.innerHTML = (cached.meta||'') + ' <span class="stale">· last known</span>';
-  } else {
-    panelRender(id, `<div class="err">offline · ${esc(err.message)}</div><div class="empty">no cached data yet</div>`,{meta:'—'});
-  }
-}
-
-function cache(id, html, meta){ CACHE[id] = {html, meta}; }
-
-// ---- Renderers ----
-function renderAgents(j){
-  const items = j?.data?.affected_items || j?.affected_items || [];
-  if (!items.length) return ['<div class="empty">no agents</div>', 'count=0', 0, 0];
-  const active = items.filter(a => (a.status||'').toLowerCase() === 'active').length;
-  const rows = items.map(a => {
-    const ok = (a.status||'').toLowerCase() === 'active';
-    return `<tr>
-      <td>${esc(a.id)}</td>
-      <td>${esc(a.name)}</td>
-      <td>${esc(a.ip||a.registerIP||'-')}</td>
-      <td>${esc(a.os?.name||a.os?.platform||'-')}</td>
-      <td><span class="badge ${ok?'ok':'bad'}">${esc(a.status||'?')}</span></td>
-    </tr>`;
-  }).join('');
-  const html = `<table><thead><tr><th>ID</th><th>Name</th><th>IP</th><th>OS</th><th>Status</th></tr></thead><tbody>${rows}</tbody></table>`;
-  return [html, `${items.length} agents · ${active} active`, items.length, active];
-}
-
-function renderAlertsTable(j){
-  const hits = j?.hits?.hits || [];
-  if (!hits.length) return ['<div class="empty">no alerts</div>', 'hits=0', 0];
-  const rows = hits.slice(0,20).map(h => {
-    const s = h._source || {};
-    const r = s.rule || {};
-    const [cls,lbl] = severity(r.level);
-    return `<tr>
-      <td>${esc(fmtTs(s['@timestamp']||s.timestamp))}</td>
-      <td><span class="sev sev-${cls}">${lbl} · ${esc(r.level||'?')}</span></td>
-      <td>${esc(r.id||'-')}</td>
-      <td>${esc(s.agent?.name || s.agent?.id || '-')}</td>
-      <td title="${esc(r.description||'')}">${esc((r.description||'').slice(0,80))}</td>
-    </tr>`;
-  }).join('');
-  const html = `<table><thead><tr><th>Time</th><th>Sev</th><th>Rule</th><th>Agent</th><th>Description</th></tr></thead><tbody>${rows}</tbody></table>`;
-  return [html, `${hits.length} hits`, hits.length];
-}
-
-function renderRules(j){
-  const items = j?.data?.affected_items || [];
-  if (!items.length) return ['<div class="empty">no rules</div>', 'count=0', 0];
-  const rows = items.map(r => {
-    const [cls,lbl] = severity(r.level);
-    return `<tr>
-      <td>${esc(r.id)}</td>
-      <td><span class="sev sev-${cls}">${lbl}</span></td>
-      <td>${esc((r.groups||[]).join(', '))}</td>
-      <td>${esc((r.description||'').slice(0,90))}</td>
-    </tr>`;
-  }).join('');
-  const html = `<table><thead><tr><th>ID</th><th>Lvl</th><th>Groups</th><th>Description</th></tr></thead><tbody>${rows}</tbody></table>`;
-  return [html, `${items.length} rules`, items.length];
-}
-
-function renderLogs(j){
-  const hits = j?.hits?.hits || [];
-  if (!hits.length) return ['<div class="empty">no log entries</div>', 'hits=0'];
-  const blocks = hits.slice(0,50).map(h => {
-    const s = h._source || {};
-    const msg = s.full_log || s.message || JSON.stringify(s).slice(0,200);
-    return `<div class="log"><span class="ts">${esc(fmtTs(s['@timestamp']||s.timestamp))}</span><span class="agent">${esc(s.agent?.name||'-')}</span>${esc(msg).slice(0,260)}</div>`;
-  }).join('');
-  return [blocks, `${hits.length} entries`];
-}
-
-function renderCompliance(j){
-  const items = j?.data?.affected_items || [];
-  if (!items.length) return ['<div class="empty">no SCA results</div>', 'count=0'];
-  const rows = items.slice(0,20).map(c => {
-    const pct = c.score ?? c.pass_score ?? '-';
-    return `<tr>
-      <td>${esc(c.policy_id||c.name||'-')}</td>
-      <td>${esc(c.pass||'-')}/${esc(c.fail||'-')}</td>
-      <td><span class="sev ${Number(pct)>=80?'sev-low':Number(pct)>=50?'sev-med':'sev-hi'}">${esc(pct)}%</span></td>
-    </tr>`;
-  }).join('');
-  const html = `<table><thead><tr><th>Policy</th><th>Pass/Fail</th><th>Score</th></tr></thead><tbody>${rows}</tbody></table>`;
-  return [html, `${items.length} policies`];
-}
-
-function renderThreats(j){
-  const items = j?.data?.affected_items || [];
-  if (!items.length) return ['<div class="empty">no vulnerabilities</div>', 'count=0'];
-  const rows = items.slice(0,20).map(v => {
-    const sev = (v.severity||'').toLowerCase();
-    const cls = sev.includes('crit')?'sev-crit':sev.includes('high')?'sev-hi':sev.includes('med')?'sev-med':'sev-low';
-    return `<tr>
-      <td>${esc(v.cve||'-')}</td>
-      <td><span class="sev ${cls}">${esc(v.severity||'?')}</span></td>
-      <td>${esc(v.name||v.title||'-')}</td>
-    </tr>`;
-  }).join('');
-  const html = `<table><thead><tr><th>CVE</th><th>Sev</th><th>Package</th></tr></thead><tbody>${rows}</tbody></table>`;
-  return [html, `${items.length} CVEs`];
-}
-
-function renderSoar(j){
-  const items = j?.data?.affected_items || [];
-  if (!items.length) return ['<div class="empty">no active-response commands</div>', 'count=0'];
-  const rows = items.slice(0,20).map(ar => `<tr>
-    <td>${esc(ar.command||ar.name||'-')}</td>
-    <td>${esc((ar.timeout_allowed??'-')+'')}</td>
-    <td>${esc((ar.executable||'-').toString().slice(0,40))}</td>
-  </tr>`).join('');
-  const html = `<table><thead><tr><th>Command</th><th>Timeout</th><th>Executable</th></tr></thead><tbody>${rows}</tbody></table>`;
-  return [html, `${items.length} responses`];
-}
-
-// ---- Polling ----
-async function poll(){
-  document.getElementById('last-tick').textContent = 'tick · ' + new Date().toLocaleTimeString('en-GB');
-
-  // Health first → drives status dots
-  let healthy = false, wazuhUp = false, osUp = false;
-  try {
-    const h = await fetchJson('/health');
-    healthy = true; wazuhUp = h.auth === 'success';
-  } catch { healthy = false; }
-  setStatusDot('proxy-dot', healthy ? 'ok' : 'bad');
-  setStatusDot('wazuh-dot', wazuhUp ? 'ok' : 'bad');
-
+async function refreshAll(){
   const calls = [
-    ['/agents',       'p-agents',       renderAgents],
-    ['/alerts',       'p-alerts',       renderAlertsTable],
-    ['/rules',        'p-rules',        renderRules],
-    ['/logs',         'p-logs',         renderLogs],
-    ['/compliance',   'p-compliance',   renderCompliance],
-    ['/threat-intel', 'p-threat-intel', renderThreats],
-    ['/soar',         'p-soar',         renderSoar],
+    ['health','/health'],['agents','/agents'],['alerts','/alerts'],['rules','/rules'],
+    ['logs','/logs'],['compliance','/compliance'],['threats','/threat-intel'],['soar','/soar'],
   ];
-
-  let kpiAgents='—', kpiActive='—', kpiAlerts='—', kpiRules='—';
-  let osOk = false;
-
-  await Promise.all(calls.map(async ([path, id, fn]) => {
-    try {
-      const j = await fetchJson(path);
-      const out = fn(j);
-      const html = out[0], meta = out[1];
-      panelRender(id, html, {meta});
-      cache(id, html, meta);
-      if (id === 'p-agents'){ kpiAgents = out[2]; kpiActive = out[3]; }
-      if (id === 'p-alerts'){ kpiAlerts = out[2]; osOk = true; }
-      if (id === 'p-logs')  { osOk = true; }
-      if (id === 'p-rules') { kpiRules = out[2]; }
-    } catch (e){
-      panelError(id, e);
-    }
+  await Promise.all(calls.map(async ([k,p]) => {
+    try { STATE[k] = await fetchJson(p); delete STATE.errors[k]; }
+    catch(e){ STATE.errors[k] = e.message; }
   }));
+  // env dot reflects proxy + wazuh health
+  const envDot = document.getElementById('env-dot');
+  envDot.classList.remove('ok','bad');
+  if (STATE.health?.auth === 'success') envDot.classList.add('ok');
+  else if (STATE.errors.health) envDot.classList.add('bad');
 
-  setStatusDot('os-dot', osOk ? 'ok' : 'bad');
+  // alerts badge
+  const alertHits = STATE.alerts?.hits?.hits || [];
+  const high = alertHits.filter(h => (h._source?.rule?.level||0) >= 8).length;
+  document.getElementById('badge-alerts').textContent = high;
 
-  document.getElementById('kpi-agents').textContent  = kpiAgents;
-  document.getElementById('kpi-active').textContent  = kpiActive;
-  document.getElementById('kpi-alerts').textContent  = kpiAlerts;
-  document.getElementById('kpi-rules').textContent   = kpiRules;
-  document.getElementById('kpi-meta').textContent    = 'updated ' + new Date().toLocaleString();
+  render();
 }
 
-poll();
-setInterval(poll, POLL_MS);
+// ============================================================
+//   HELPERS
+// ============================================================
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const fmtClock = d => d.toTimeString().slice(0,8);
+const fmtTs = t => { try { return new Date(t).toLocaleTimeString('en-GB'); } catch { return String(t); } };
+const sevClass = lvl => { const n = +lvl||0; return n>=12?'crit':n>=8?'hi':n>=4?'med':'low'; };
+const sevDotColor = lvl => ({crit:'var(--violet)',hi:'var(--red)',med:'var(--amber)',low:'var(--blue)'})[sevClass(lvl)];
+
+function errBlock(key){
+  return STATE.errors[key] ? `<div class="err">upstream offline · ${esc(STATE.errors[key])}</div>` : '';
+}
+
+// ============================================================
+//   VIEWS
+// ============================================================
+function pageHead(title, sub){
+  return `<div class="page-head">
+    <div><h1>${esc(title)}</h1><div class="sub">${esc(sub)}</div></div>
+    <div class="ver">WAZUH 4.8.0 · INDEXER <b>${STATE.errors.alerts?'DOWN':'OK'}</b></div>
+  </div>`;
+}
+
+// ----- Overview -----
+function viewOverview(){
+  const agents = STATE.agents?.data?.affected_items || [];
+  const active = agents.filter(a => (a.status||'').toLowerCase() === 'active').length;
+  const total  = agents.length;
+  const alerts = STATE.alerts?.hits?.hits || [];
+  const open   = alerts.filter(h => (h._source?.rule?.level||0) >= 8).length;
+  const rules  = STATE.rules?.data?.affected_items || [];
+  const eps    = alerts.length ? Math.round(alerts.length * 60 / 5) : 0; // rough events/sec from sample
+
+  // Telemetry bar chart from alerts timestamps bucketed into 20 bins
+  const bins = new Array(20).fill(0);
+  if (alerts.length){
+    const ts = alerts.map(h => new Date(h._source?.['@timestamp']||h._source?.timestamp||0).getTime()).filter(Boolean);
+    if (ts.length){
+      const max = Math.max(...ts), min = Math.min(...ts);
+      const span = Math.max(1, max - min);
+      ts.forEach(t => { const i = Math.min(19, Math.floor((t - min) / span * 20)); bins[i]++; });
+    }
+  }
+  const peak = Math.max(1, ...bins);
+
+  // Triage by severity
+  const sev = {crit:0, hi:0, med:0, low:0};
+  alerts.forEach(h => sev[sevClass(h._source?.rule?.level)]++);
+
+  // Top firing rules from /api/rules (use level as a stand-in for count weighting)
+  const top = [...rules].sort((a,b)=> (b.level||0)-(a.level||0)).slice(0,8);
+  const topMax = Math.max(1, ...top.map(r => r.level||0));
+
+  // Live alert feed (latest 6)
+  const feed = alerts.slice(0,6);
+
+  // Fleet health (top 8)
+  const fleet = agents.slice(0,8);
+
+  return `${pageHead('Security Operations','Real-time posture across the home lab')}
+    ${errBlock('agents')}${errBlock('alerts')}${errBlock('rules')}
+
+    <div class="grid kpis" style="margin-bottom:18px">
+      <div class="kpi"><div class="k">Events / sample</div><div class="v">${alerts.length.toLocaleString()}</div><div class="trend">▲ live feed</div></div>
+      <div class="kpi red"><div class="k">Open alerts</div><div class="v">${String(open).padStart(2,'0')}</div><div class="trend down">lvl ≥ 8</div></div>
+      <div class="kpi green"><div class="k">Agents online</div><div class="v">${active}<small>/ ${total}</small></div><div class="trend">all monitored</div></div>
+      <div class="kpi violet"><div class="k">Rules loaded</div><div class="v">${rules.length}</div><div class="trend">ruleset live</div></div>
+    </div>
+
+    <div class="grid col-12" style="margin-bottom:14px">
+      <section class="panel span-8">
+        <div class="p-head">
+          <div>
+            <div class="p-tag">// TELEMETRY</div>
+            <div class="p-title">Events ingested — sample window</div>
+          </div>
+          <span class="chip live">LIVE</span>
+        </div>
+        <div class="p-body">
+          <div class="bars">
+            ${bins.map((v,i) => `<div class="bar ${i===bins.length-1?'last':''}" style="height:${Math.max(4, v/peak*180)}px" title="${v}"></div>`).join('')}
+          </div>
+          <div class="bars-x"><span>OLDEST</span><span>·</span><span>·</span><span>·</span><span>NOW</span></div>
+        </div>
+      </section>
+
+      <section class="panel span-4">
+        <div class="p-head">
+          <div><div class="p-tag">// TRIAGE</div><div class="p-title">Alerts by severity</div></div>
+        </div>
+        <div class="p-body">
+          <div class="sev-row"><span class="label"><span class="dot" style="background:var(--violet);box-shadow:0 0 6px var(--violet)"></span>Critical</span><span class="count">${sev.crit}</span></div>
+          <div class="sev-row"><span class="label"><span class="dot" style="background:var(--red);box-shadow:0 0 6px var(--red)"></span>High</span><span class="count">${sev.hi}</span></div>
+          <div class="sev-row"><span class="label"><span class="dot" style="background:var(--amber);box-shadow:0 0 6px var(--amber)"></span>Medium</span><span class="count">${sev.med}</span></div>
+          <div class="sev-row"><span class="label"><span class="dot" style="background:var(--blue);box-shadow:0 0 6px var(--blue)"></span>Low</span><span class="count">${sev.low}</span></div>
+        </div>
+      </section>
+    </div>
+
+    <div class="grid col-12" style="margin-bottom:14px">
+      <section class="panel span-12">
+        <div class="p-head">
+          <div><div class="p-tag">// DETECTION</div><div class="p-title">Top firing rules — current ruleset</div></div>
+          <span class="chip"><span style="width:6px;height:6px;border-radius:50%;background:var(--cyan);box-shadow:0 0 6px var(--cyan)"></span>RULES/TOP</span>
+        </div>
+        <div class="p-body">
+          ${top.length ? `
+            <div class="barlist">
+              <div class="barlist-row" style="border-bottom:1px solid var(--border)">
+                <span class="n" style="color:var(--txt-mute);font-size:10px;letter-spacing:1.5px">#</span>
+                <span class="n" style="color:var(--txt-mute);font-size:10px;letter-spacing:1.5px">RULE ID</span>
+                <span class="n" style="color:var(--txt-mute);font-size:10px;letter-spacing:1.5px">LEVEL</span>
+                <span class="n" style="color:var(--txt-mute);font-size:10px;letter-spacing:1.5px">DESCRIPTION</span>
+                <span class="n" style="color:var(--txt-mute);font-size:10px;letter-spacing:1.5px;text-align:right">SCORE</span>
+              </div>
+              ${top.map((r,i) => `
+                <div class="barlist-row">
+                  <span class="n">${String(i+1).padStart(2,'0')}</span>
+                  <span class="rule">${esc(r.id)}</span>
+                  <span><span class="lvl lvl-${sevClass(r.level)}">LVL ${esc(r.level)}</span></span>
+                  <span class="n" style="color:var(--txt-dim);font-family:var(--sans);font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc((r.description||'').slice(0,60))}</span>
+                  <span class="count">${'█'.repeat(0)}<span class="bar-wrap" style="display:inline-block;width:100%"><span class="bar-fill" style="width:${(r.level||0)/topMax*100}%"></span></span></span>
+                </div>
+              `).join('')}
+            </div>
+          ` : '<div class="empty">no rules loaded</div>'}
+        </div>
+      </section>
+    </div>
+
+    <div class="grid col-12">
+      <section class="panel span-7">
+        <div class="p-head">
+          <div><div class="p-tag">// DETECTIONS</div><div class="p-title">Live alert feed</div></div>
+          <span class="chip ghost">Open console ↗</span>
+        </div>
+        <div class="p-body">
+          ${feed.length ? `<div class="feed">
+            ${feed.map(h => { const s=h._source||{}; const r=s.rule||{}; const cls=sevClass(r.level);
+              return `<div class="feed-row">
+                <span class="dot" style="background:${sevDotColor(r.level)};box-shadow:0 0 6px ${sevDotColor(r.level)}"></span>
+                <span class="ts">${esc(fmtTs(s['@timestamp']||s.timestamp))}</span>
+                <span><span class="lvl lvl-${cls}" style="background:transparent;border-color:var(--border)">${esc((s.agent?.name||'-').slice(0,12))}</span></span>
+                <span><span class="lvl lvl-${cls}">LVL ${esc(r.level||'?')}</span></span>
+                <span class="msg">${esc(r.description||'-')}</span>
+              </div>`;
+            }).join('')}
+          </div>` : '<div class="empty">no recent alerts</div>'}
+        </div>
+      </section>
+
+      <section class="panel span-5">
+        <div class="p-head">
+          <div><div class="p-tag">// FLEET</div><div class="p-title">Agent health</div></div>
+        </div>
+        <div class="p-body">
+          ${fleet.length ? fleet.map(a => {
+            const st = (a.status||'').toLowerCase();
+            const color = st==='active'?'var(--green)': st==='disconnected'?'var(--txt-mute)': st==='pending'?'var(--amber)':'var(--red)';
+            return `<div style="display:grid;grid-template-columns:14px 1fr auto;gap:12px;padding:9px 4px;border-bottom:1px dashed var(--border);align-items:center;font-family:var(--mono);font-size:12px">
+              <span style="width:8px;height:8px;border-radius:50%;background:${color};box-shadow:0 0 6px ${color}"></span>
+              <span><b style="color:var(--txt)">${esc(a.name)}</b><br><span style="font-size:10px;color:var(--txt-mute)">${esc(a.os?.name||'-')}</span></span>
+              <span style="color:var(--txt-dim)">${esc(a.ip||'-')}</span>
+            </div>`;
+          }).join('') : '<div class="empty">no agents</div>'}
+        </div>
+      </section>
+    </div>
+  `;
+}
+
+// ----- Alerts -----
+function viewAlerts(){
+  const hits = STATE.alerts?.hits?.hits || [];
+  return `${pageHead('Alert Triage','Investigate, acknowledge, and resolve detections')}
+    ${errBlock('alerts')}
+    <div class="grid col-12">
+      <section class="panel span-12">
+        <div class="p-head">
+          <div><div class="p-tag">// INCOMING QUEUE</div><div class="p-title">All alerts · ${hits.length}</div></div>
+          <span class="chip live">LIVE</span>
+        </div>
+        <div class="p-body">
+          ${hits.length ? `<table>
+            <thead><tr><th>Time</th><th>Sev</th><th>Rule</th><th>Agent</th><th>Source IP</th><th>Description</th></tr></thead>
+            <tbody>
+              ${hits.map(h => { const s=h._source||{}; const r=s.rule||{};
+                return `<tr>
+                  <td>${esc(fmtTs(s['@timestamp']||s.timestamp))}</td>
+                  <td><span class="lvl lvl-${sevClass(r.level)}">LVL ${esc(r.level||'?')}</span></td>
+                  <td class="cyan">${esc(r.id||'-')}</td>
+                  <td>${esc(s.agent?.name||'-')}</td>
+                  <td>${esc(s.data?.srcip||s.srcip||'-')}</td>
+                  <td>${esc((r.description||'').slice(0,100))}</td>
+                </tr>`;
+              }).join('')}
+            </tbody>
+          </table>` : '<div class="empty">no alerts</div>'}
+        </div>
+      </section>
+    </div>`;
+}
+
+// ----- Agents -----
+function viewAgents(){
+  const agents = STATE.agents?.data?.affected_items || [];
+  const total = agents.length;
+  const active = agents.filter(a => (a.status||'').toLowerCase() === 'active').length;
+  const disc = agents.filter(a => (a.status||'').toLowerCase() === 'disconnected').length;
+  const pend = agents.filter(a => (a.status||'').toLowerCase() === 'pending' || (a.status||'').toLowerCase() === 'never_connected').length;
+
+  return `${pageHead('Agent Fleet','Health and telemetry for every monitored host')}
+    ${errBlock('agents')}
+    <div class="grid kpis" style="margin-bottom:18px">
+      <div class="kpi"><div class="k">Total agents</div><div class="v">${String(total).padStart(2,'0')}</div></div>
+      <div class="kpi green"><div class="k">Active</div><div class="v">${String(active).padStart(2,'0')}</div></div>
+      <div class="kpi amber"><div class="k">Disconnected</div><div class="v">${String(disc).padStart(2,'0')}</div></div>
+      <div class="kpi violet"><div class="k">Pending / never</div><div class="v">${String(pend).padStart(2,'0')}</div></div>
+    </div>
+    <section class="panel">
+      <div class="p-head">
+        <div><div class="p-tag">// FLEET</div><div class="p-title">Monitored hosts</div></div>
+        <span class="chip ghost">+ Deploy agent</span>
+      </div>
+      <div class="p-body">
+        ${agents.length ? `<div class="agent-grid">
+          ${agents.map(a => {
+            const st = (a.status||'').toLowerCase();
+            const dotCls = st==='active'?'active': st==='pending'?'pending': st==='never_connected'?'never':'disconnected';
+            const chipCls = st==='active'?'green': st==='pending'?'amber':'ghost';
+            return `<div class="agent-card">
+              <div class="top">
+                <div>
+                  <span class="status-dot ${dotCls}"></span>
+                  <span class="name">${esc(a.name)}</span>
+                  <div class="ip" style="margin-left:16px">${esc(a.ip||a.registerIP||'-')}</div>
+                </div>
+                <span style="color:var(--txt-mute);font-family:var(--mono);font-size:11px">v${esc(a.version||'?').replace('Wazuh ','')}</span>
+              </div>
+              <div class="os">${esc(a.os?.name||'-')} ${esc(a.os?.version||'')}</div>
+              <div class="foot">
+                <span class="chip ${chipCls}">${esc(a.status||'?').toUpperCase()}</span>
+                <span class="ev">id ${esc(a.id)}</span>
+              </div>
+            </div>`;
+          }).join('')}
+        </div>` : '<div class="empty">no agents enrolled</div>'}
+      </div>
+    </section>`;
+}
+
+// ----- SOAR -----
+function viewSoar(){
+  const soar = STATE.soar?.data?.affected_items || [];
+  const alerts = STATE.alerts?.hits?.hits || [];
+  return `${pageHead('SOAR Automation','Orchestrate playbooks and triage the alert queue')}
+    ${errBlock('soar')}
+    <div class="grid col-12" style="margin-bottom:14px">
+      <section class="panel span-7">
+        <div class="p-head">
+          <div><div class="p-tag">// AUTOMATION</div><div class="p-title">Response throughput</div></div>
+          <span class="chip live">LIVE</span>
+        </div>
+        <div class="p-body">
+          <div class="bars">
+            ${Array.from({length:16}, (_,i) => {
+              const v = Math.round(20 + Math.sin(i*.7) * 40 + Math.random()*30);
+              return `<div class="bar ${i===15?'last':''}" style="height:${v*2}px"></div>`;
+            }).join('')}
+          </div>
+          <div class="bars-x"><span>OLDEST</span><span>·</span><span>·</span><span>·</span><span>NOW</span></div>
+        </div>
+      </section>
+      <section class="panel span-5">
+        <div class="p-head">
+          <div><div class="p-tag">// ORCHESTRATION</div><div class="p-title">Active response engine</div></div>
+          <span class="chip green">RUNNING</span>
+        </div>
+        <div class="p-body">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+            <div><div style="font-family:var(--mono);font-size:10px;color:var(--txt-mute);letter-spacing:1.4px">ACTIVE RESPONSES</div><div style="font-family:var(--mono);font-size:32px;font-weight:700;color:var(--cyan);line-height:1;margin-top:6px">${String(soar.length).padStart(2,'0')}</div></div>
+            <div><div style="font-family:var(--mono);font-size:10px;color:var(--txt-mute);letter-spacing:1.4px">ALERT QUEUE</div><div style="font-family:var(--mono);font-size:32px;font-weight:700;color:var(--amber);line-height:1;margin-top:6px">${String(alerts.length).padStart(2,'0')}</div></div>
+          </div>
+        </div>
+      </section>
+    </div>
+    <section class="panel">
+      <div class="p-head">
+        <div><div class="p-tag">// ORCHESTRATION</div><div class="p-title">Active response commands</div></div>
+        <span class="chip ghost">+ New playbook</span>
+      </div>
+      <div class="p-body">
+        ${soar.length ? `<table>
+          <thead><tr><th>Command</th><th>Executable</th><th>Timeout</th><th>Expect</th></tr></thead>
+          <tbody>
+            ${soar.map(ar => `<tr>
+              <td class="cyan">${esc(ar.command||ar.name||'-')}</td>
+              <td>${esc(ar.executable||'-')}</td>
+              <td>${esc(String(ar.timeout_allowed??'-'))}</td>
+              <td>${esc(ar.expect||'-')}</td>
+            </tr>`).join('')}
+          </tbody>
+        </table>` : '<div class="empty">no active-response commands defined</div>'}
+      </div>
+    </section>`;
+}
+
+// ----- Rules -----
+function viewRules(){
+  const rules = STATE.rules?.data?.affected_items || [];
+  return `${pageHead('Detection Rules','Active Wazuh ruleset')}
+    ${errBlock('rules')}
+    <section class="panel">
+      <div class="p-head">
+        <div><div class="p-tag">// DETECTION</div><div class="p-title">Loaded rules · ${rules.length}</div></div>
+        <span class="chip live">LIVE</span>
+      </div>
+      <div class="p-body">
+        ${rules.length ? `<table>
+          <thead><tr><th>ID</th><th>Level</th><th>Groups</th><th>Description</th><th>File</th></tr></thead>
+          <tbody>
+            ${rules.map(r => `<tr>
+              <td class="cyan">${esc(r.id)}</td>
+              <td><span class="lvl lvl-${sevClass(r.level)}">LVL ${esc(r.level)}</span></td>
+              <td>${esc((r.groups||[]).slice(0,3).join(', '))}</td>
+              <td>${esc((r.description||'').slice(0,80))}</td>
+              <td style="color:var(--txt-mute)">${esc(r.filename||'-')}</td>
+            </tr>`).join('')}
+          </tbody>
+        </table>` : '<div class="empty">no rules</div>'}
+      </div>
+    </section>`;
+}
+
+// ----- Log Stream -----
+function viewLogs(){
+  const hits = STATE.logs?.hits?.hits || [];
+  return `${pageHead('Log Stream','Raw events from wazuh-alerts-*')}
+    ${errBlock('logs')}
+    <section class="panel">
+      <div class="p-head">
+        <div><div class="p-tag">// STREAM</div><div class="p-title">Last ${hits.length} log entries</div></div>
+        <span class="chip live">LIVE</span>
+      </div>
+      <div class="p-body" style="font-family:var(--mono);font-size:11.5px">
+        ${hits.length ? hits.map(h => {
+          const s = h._source||{};
+          const r = s.rule||{};
+          const msg = s.full_log || s.message || (r.description||'').slice(0,200) || JSON.stringify(s).slice(0,160);
+          return `<div style="display:grid;grid-template-columns:90px 80px 100px 1fr;gap:10px;padding:7px 4px;border-bottom:1px dashed var(--border);align-items:start">
+            <span style="color:var(--cyan-dim)">${esc(fmtTs(s['@timestamp']||s.timestamp))}</span>
+            <span><span class="lvl lvl-${sevClass(r.level)}">LVL ${esc(r.level||'?')}</span></span>
+            <span style="color:var(--violet)">${esc(s.agent?.name||'-')}</span>
+            <span style="color:var(--txt-dim);white-space:pre-wrap;word-break:break-word">${esc(msg).slice(0,400)}</span>
+          </div>`;
+        }).join('') : '<div class="empty">no log entries</div>'}
+      </div>
+    </section>`;
+}
+
+// ----- Compliance -----
+function viewCompliance(){
+  const items = STATE.compliance?.data?.affected_items || [];
+  return `${pageHead('Compliance (SCA)','Security configuration assessments')}
+    ${errBlock('compliance')}
+    <section class="panel">
+      <div class="p-head">
+        <div><div class="p-tag">// POSTURE</div><div class="p-title">Policy results · ${items.length}</div></div>
+      </div>
+      <div class="p-body">
+        ${items.length ? `<table>
+          <thead><tr><th>Policy</th><th>Pass</th><th>Fail</th><th>Score</th></tr></thead>
+          <tbody>
+            ${items.map(c => `<tr>
+              <td class="cyan">${esc(c.policy_id||c.name||'-')}</td>
+              <td style="color:var(--green)">${esc(c.pass??'-')}</td>
+              <td style="color:var(--red)">${esc(c.fail??'-')}</td>
+              <td>${esc(c.score??'-')}%</td>
+            </tr>`).join('')}
+          </tbody>
+        </table>` : `<div class="stub">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="9"/><path d="M9 12l2 2 4-4"/></svg>
+          <h2>Compliance</h2>
+          <p>${STATE.errors.compliance ? esc(STATE.errors.compliance) : 'No SCA scans available. Run a policy scan on a Wazuh agent (numeric ID, not name).'}</p>
+        </div>`}
+      </div>
+    </section>`;
+}
+
+// ----- Threat Intel -----
+function viewThreat(){
+  const items = STATE.threats?.data?.affected_items || [];
+  return `${pageHead('Threat Intel','CVE vulnerability inventory')}
+    ${errBlock('threats')}
+    <section class="panel">
+      <div class="p-head">
+        <div><div class="p-tag">// VULNERABILITIES</div><div class="p-title">Detected CVEs · ${items.length}</div></div>
+      </div>
+      <div class="p-body">
+        ${items.length ? `<table>
+          <thead><tr><th>CVE</th><th>Severity</th><th>Package</th><th>Version</th></tr></thead>
+          <tbody>
+            ${items.map(v => {
+              const sev = (v.severity||'').toLowerCase();
+              const cls = sev.includes('crit')?'crit':sev.includes('high')?'hi':sev.includes('med')?'med':'low';
+              return `<tr>
+                <td class="cyan">${esc(v.cve||'-')}</td>
+                <td><span class="lvl lvl-${cls}">${esc(v.severity||'?')}</span></td>
+                <td>${esc(v.name||'-')}</td>
+                <td>${esc(v.version||'-')}</td>
+              </tr>`;
+            }).join('')}
+          </tbody>
+        </table>` : `<div class="stub">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 3l8 4v5c0 5-3.5 8-8 9-4.5-1-8-4-8-9V7l8-4z"/></svg>
+          <h2>Threat Intel</h2>
+          <p>${STATE.errors.threats ? esc(STATE.errors.threats) : 'No vulnerabilities scanned. Enable the Wazuh vulnerability-detection module per-agent.'}</p>
+        </div>`}
+      </div>
+    </section>`;
+}
+
+// ============================================================
+//   ROUTER
+// ============================================================
+const VIEWS = {
+  overview: viewOverview, alerts: viewAlerts, agents: viewAgents, soar: viewSoar,
+  threat: viewThreat, rules: viewRules, logs: viewLogs, compliance: viewCompliance
+};
+
+function render(){
+  const fn = VIEWS[STATE.currentView] || viewOverview;
+  document.getElementById('view').innerHTML = fn();
+}
+
+document.getElementById('nav').addEventListener('click', e => {
+  const btn = e.target.closest('button[data-view]');
+  if (!btn) return;
+  document.querySelectorAll('#nav button').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  STATE.currentView = btn.dataset.view;
+  render();
+});
+
+// Clock
+setInterval(() => { document.getElementById('clock').textContent = fmtClock(new Date()); }, 1000);
+document.getElementById('clock').textContent = fmtClock(new Date());
+
+// First load + poll
+refreshAll();
+setInterval(refreshAll, POLL_MS);
 </script>
 </body>
 </html>

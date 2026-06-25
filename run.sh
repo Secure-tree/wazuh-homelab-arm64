@@ -1,35 +1,40 @@
 #!/bin/bash
-# CyberKaushik SOC — Master startup script
-# Run this to start the entire SOC platform
-# Cowork can trigger this automatically on boot
-
 echo "============================================"
 echo "  CyberKaushik SOC Platform — Starting Up"
 echo "============================================"
 
 cd ~/Projects/wazuh-dashboard
-
-# Step 1 — Activate Python environment
 source venv/bin/activate
 
-# Step 2 — Check Ubuntu VM is reachable
-echo "Checking Ubuntu VM..."
-ssh -o ConnectTimeout=5 ubuntu-lab "echo 'Ubuntu: online'" 2>/dev/null || echo "Ubuntu: offline"
+# Kill existing processes
+pkill -9 -f proxy.py 2>/dev/null
+pkill -9 -f "http.server 5002" 2>/dev/null
+sleep 1
 
-# Step 3 — Start the proxy
+# Check Ubuntu VM
+echo "Checking Ubuntu VM..."
+ssh -o ConnectTimeout=5 ubuntu-lab "echo 'Ubuntu: online'" 2>/dev/null || echo "Ubuntu: offline — dashboard will show cached data"
+
+# Start Wazuh proxy
 echo "Starting Wazuh proxy on :5001..."
-pkill -f "python3 proxy.py" 2>/dev/null
 nohup python3 proxy.py > logs/proxy.log 2>&1 &
 echo "Proxy PID: $!"
 
-# Step 4 — Open dashboard in browser
+# Start HTTP server for dashboard
+echo "Starting dashboard server on :5002..."
+nohup python3 -m http.server 5002 > logs/http.log 2>&1 &
+echo "HTTP server PID: $!"
+
 sleep 2
+
+# Open dashboard in browser
 echo "Opening dashboard..."
-open ~/Projects/wazuh-dashboard/dashboard.html
+open http://localhost:5002/dashboard-live.html
 
 echo "============================================"
 echo "  SOC Platform running"
 echo "  Proxy:     http://localhost:5001"
-echo "  Dashboard: dashboard.html"
+echo "  Dashboard: http://localhost:5002/dashboard-live.html"
+echo "  Wazuh UI:  https://<WAZUH_MANAGER_IP>"
 echo "  Logs:      ~/Projects/wazuh-dashboard/logs/"
 echo "============================================"

@@ -1,0 +1,411 @@
+<!--
+  CyberKaushik SOC — Sysmon Detection Rules for Wazuh
+  Author: r.kaushik
+  Inspired by: Florian Roth's Sigma ruleset (sigma-hq/sigma)
+  Conversion: Sigma → Wazuh XML
+
+  Coverage:
+    Event ID  1   — Process Creation
+    Event ID  3   — Network Connection
+    Event ID  6   — Driver Loaded
+    Event ID  7   — Image Loaded (DLL)
+    Event ID  8   — CreateRemoteThread
+    Event ID 10   — ProcessAccess (LSASS dump detection)
+    Event ID 11   — FileCreate
+    Event ID 12/13 — Registry persistence
+    Event ID 15   — FileCreateStreamHash (ADS)
+    Event ID 17/18 — Pipe events (C2 frameworks)
+    Event ID 22   — DNS Query
+    Event ID 25   — ProcessTampering
+
+  Rule ID range: 100100 – 100200 (per ops spec)
+  Note: Wazuh's reserved user range is 100000+. Rules <100000 may collide
+        with vendor built-ins on certain manager versions — confirm with
+        `wazuh-logtest` before enabling in production.
+
+  Severity:
+    12 = Critical  (LSASS access, remote thread, process tampering)
+    10 = High      (Office spawns shell, encoded PS, CS pipes, DGA)
+     8 = Medium    (suspicious network, registry persistence)
+     6 = Low       (informational suspicious)
+-->
+<group name="sysmon,attack,">
+
+  <!-- ============================================================
+       100100 — Parent rule. All Sysmon events route through here.
+       ============================================================ -->
+  <rule id="100100" level="0">
+    <decoded_as>windows_eventchannel</decoded_as>
+    <field name="data.win.system.channel">Microsoft-Windows-Sysmon/Operational</field>
+    <description>Sysmon event detected</description>
+    <group>sysmon,</group>
+  </rule>
+
+  <!-- ============================================================
+       EVENT ID 1 — Process Creation
+       ============================================================ -->
+
+  <rule id="100101" level="10">
+    <if_sid>100100</if_sid>
+    <field name="data.win.system.eventID">^1$</field>
+    <field name="data.win.eventdata.parentImage" type="pcre2">(?i)\\(winword|excel|powerpnt|outlook|msaccess|mspub|visio|onenote)\.exe</field>
+    <field name="data.win.eventdata.image" type="pcre2">(?i)\\(cmd|powershell|pwsh|wscript|cscript|mshta|bitsadmin|certutil|regsvr32|rundll32)\.exe</field>
+    <description>Sysmon EID1: Office app spawned shell/LOLBin — $(data.win.eventdata.image)</description>
+    <mitre>
+      <id>T1566.001</id>
+      <id>T1059</id>
+    </mitre>
+    <group>sysmon,attack,execution,initial_access,</group>
+  </rule>
+
+  <rule id="100102" level="10">
+    <if_sid>100100</if_sid>
+    <field name="data.win.system.eventID">^1$</field>
+    <field name="data.win.eventdata.image" type="pcre2">(?i)\\(powershell|pwsh)\.exe</field>
+    <field name="data.win.eventdata.commandLine" type="pcre2">(?i)(\s|^)-(e|en|enc|enco|encod|encode|encoded|encodedc|encodedco|encodedcom|encodedcomm|encodedcomma|encodedcomman|encodedcommand|ec)(\s|$)</field>
+    <description>Sysmon EID1: PowerShell encoded command (-EncodedCommand)</description>
+    <mitre>
+      <id>T1059.001</id>
+      <id>T1027</id>
+    </mitre>
+    <group>sysmon,attack,execution,defense_evasion,</group>
+  </rule>
+
+  <rule id="100103" level="10">
+    <if_sid>100100</if_sid>
+    <field name="data.win.system.eventID">^1$</field>
+    <field name="data.win.eventdata.parentImage" type="pcre2">(?i)\\(mshta|wscript|cscript|hh)\.exe</field>
+    <description>Sysmon EID1: Script host ($(data.win.eventdata.parentImage)) spawned child process</description>
+    <mitre>
+      <id>T1218.005</id>
+      <id>T1059</id>
+    </mitre>
+    <group>sysmon,attack,execution,defense_evasion,</group>
+  </rule>
+
+  <rule id="100104" level="8">
+    <if_sid>100100</if_sid>
+    <field name="data.win.system.eventID">^1$</field>
+    <field name="data.win.eventdata.image" type="pcre2">(?i)\\rundll32\.exe</field>
+    <field name="data.win.eventdata.commandLine" type="pcre2">(?i)(javascript:|vbscript:|\\\\\\\\|\.dll[, ]+#?\d|shell32\.dll,Control_RunDLL|url\.dll,FileProtocolHandler|advpack\.dll,LaunchINFSection|setupapi\.dll,InstallHinfSection|ieframe\.dll,OpenURL)</field>
+    <description>Sysmon EID1: rundll32 with suspicious arguments — $(data.win.eventdata.commandLine)</description>
+    <mitre>
+      <id>T1218.011</id>
+    </mitre>
+    <group>sysmon,attack,defense_evasion,</group>
+  </rule>
+
+  <rule id="100105" level="10">
+    <if_sid>100100</if_sid>
+    <field name="data.win.system.eventID">^1$</field>
+    <field name="data.win.eventdata.parentImage" type="pcre2">(?i)\\svchost\.exe</field>
+    <field name="data.win.eventdata.image" type="pcre2">(?i)\\(cmd|powershell|pwsh|wscript|cscript|mshta|net|net1|sc|whoami|nltest|reg|tasklist|systeminfo)\.exe</field>
+    <description>Sysmon EID1: svchost spawned unexpected child — $(data.win.eventdata.image)</description>
+    <mitre>
+      <id>T1055</id>
+      <id>T1218</id>
+    </mitre>
+    <group>sysmon,attack,defense_evasion,privilege_escalation,</group>
+  </rule>
+
+  <!-- ============================================================
+       EVENT ID 3 — Network Connection
+       ============================================================ -->
+
+  <rule id="100106" level="8">
+    <if_sid>100100</if_sid>
+    <field name="data.win.system.eventID">^3$</field>
+    <field name="data.win.eventdata.image" type="pcre2">(?i)\\(powershell|pwsh|wscript|cscript|mshta|bitsadmin|certutil|regsvr32|rundll32)\.exe</field>
+    <description>Sysmon EID3: Scripting engine made network connection — $(data.win.eventdata.image) → $(data.win.eventdata.destinationIp):$(data.win.eventdata.destinationPort)</description>
+    <mitre>
+      <id>T1059.001</id>
+      <id>T1071</id>
+    </mitre>
+    <group>sysmon,attack,command_and_control,</group>
+  </rule>
+
+  <rule id="100107" level="8">
+    <if_sid>100100</if_sid>
+    <field name="data.win.system.eventID">^3$</field>
+    <field name="data.win.eventdata.destinationPort">^445$</field>
+    <field name="data.win.eventdata.image" negate="yes" type="pcre2">(?i)\\(System|svchost|lsass|spoolsv|services)\.exe</field>
+    <description>Sysmon EID3: Unexpected SMB connection (potential lateral movement) — $(data.win.eventdata.image) → $(data.win.eventdata.destinationIp)</description>
+    <mitre>
+      <id>T1021.002</id>
+    </mitre>
+    <group>sysmon,attack,lateral_movement,</group>
+  </rule>
+
+  <rule id="100108" level="6">
+    <if_sid>100100</if_sid>
+    <field name="data.win.system.eventID">^3$</field>
+    <field name="data.win.eventdata.destinationPort" type="pcre2">^(5353|853|8888|9999|5355)$</field>
+    <description>Sysmon EID3: DNS-like traffic on non-standard port — $(data.win.eventdata.destinationPort)</description>
+    <mitre>
+      <id>T1071.004</id>
+    </mitre>
+    <group>sysmon,attack,command_and_control,</group>
+  </rule>
+
+  <!-- ============================================================
+       EVENT ID 6 — Driver Loaded
+       ============================================================ -->
+
+  <rule id="100109" level="8">
+    <if_sid>100100</if_sid>
+    <field name="data.win.system.eventID">^6$</field>
+    <field name="data.win.eventdata.signed">^false$</field>
+    <description>Sysmon EID6: Unsigned driver loaded — $(data.win.eventdata.imageLoaded)</description>
+    <mitre>
+      <id>T1014</id>
+      <id>T1068</id>
+    </mitre>
+    <group>sysmon,attack,defense_evasion,privilege_escalation,</group>
+  </rule>
+
+  <rule id="100124" level="12">
+    <if_sid>100100</if_sid>
+    <field name="data.win.system.eventID">^6$</field>
+    <field name="data.win.eventdata.imageLoaded" type="pcre2">(?i)\\(mimidrv|gdrv|kprocesshacker|truesight|dbk64|asusio|rwdrv|wnbios|capcom|atszio|amifldrv|amsdk)\.sys</field>
+    <description>Sysmon EID6: Known malicious/vulnerable driver loaded — $(data.win.eventdata.imageLoaded)</description>
+    <mitre>
+      <id>T1014</id>
+      <id>T1068</id>
+      <id>T1543.003</id>
+    </mitre>
+    <group>sysmon,attack,defense_evasion,privilege_escalation,</group>
+  </rule>
+
+  <!-- ============================================================
+       EVENT ID 7 — Image Loaded (DLL injection indicators)
+       ============================================================ -->
+
+  <rule id="100110" level="8">
+    <if_sid>100100</if_sid>
+    <field name="data.win.system.eventID">^7$</field>
+    <field name="data.win.eventdata.imageLoaded" type="pcre2">(?i)\\(Temp|AppData\\\\Local\\\\Temp|ProgramData\\\\Temp|Users\\\\Public)\\\\[^\\\\]+\.(dll|ocx)$</field>
+    <description>Sysmon EID7: DLL loaded from temp/public path — $(data.win.eventdata.imageLoaded)</description>
+    <mitre>
+      <id>T1574</id>
+      <id>T1055</id>
+    </mitre>
+    <group>sysmon,attack,defense_evasion,</group>
+  </rule>
+
+  <!-- ============================================================
+       EVENT ID 8 — CreateRemoteThread (always suspicious)
+       ============================================================ -->
+
+  <rule id="100111" level="12">
+    <if_sid>100100</if_sid>
+    <field name="data.win.system.eventID">^8$</field>
+    <description>Sysmon EID8: CreateRemoteThread — $(data.win.eventdata.sourceImage) → $(data.win.eventdata.targetImage)</description>
+    <mitre>
+      <id>T1055.001</id>
+      <id>T1055.002</id>
+    </mitre>
+    <group>sysmon,attack,defense_evasion,privilege_escalation,</group>
+  </rule>
+
+  <rule id="100125" level="12">
+    <if_sid>100111</if_sid>
+    <field name="data.win.eventdata.targetImage" type="pcre2">(?i)\\(lsass|winlogon|csrss|services|smss|wininit)\.exe</field>
+    <description>Sysmon EID8: CreateRemoteThread into critical process — $(data.win.eventdata.targetImage)</description>
+    <mitre>
+      <id>T1055.001</id>
+      <id>T1003.001</id>
+    </mitre>
+    <group>sysmon,attack,credential_access,privilege_escalation,</group>
+  </rule>
+
+  <!-- ============================================================
+       EVENT ID 10 — ProcessAccess (LSASS dump detection)
+       ============================================================ -->
+
+  <rule id="100112" level="12">
+    <if_sid>100100</if_sid>
+    <field name="data.win.system.eventID">^10$</field>
+    <field name="data.win.eventdata.targetImage" type="pcre2">(?i)\\lsass\.exe$</field>
+    <field name="data.win.eventdata.sourceImage" negate="yes" type="pcre2">(?i)\\(MsMpEng|wininit|csrss|services|svchost|lsass|smss|winlogon|SearchIndexer|SecurityHealthService|MsSense)\.exe$</field>
+    <description>Sysmon EID10: LSASS memory access from $(data.win.eventdata.sourceImage) — grantedAccess $(data.win.eventdata.grantedAccess)</description>
+    <mitre>
+      <id>T1003.001</id>
+    </mitre>
+    <group>sysmon,attack,credential_access,</group>
+  </rule>
+
+  <rule id="100113" level="12">
+    <if_sid>100112</if_sid>
+    <field name="data.win.eventdata.grantedAccess" type="pcre2">(?i)^0x(1fffff|1010|1410|143a|1438|1438|0x40|fffff)$</field>
+    <description>Sysmon EID10: LSASS access with credential-dump signature mask — grantedAccess $(data.win.eventdata.grantedAccess)</description>
+    <mitre>
+      <id>T1003.001</id>
+    </mitre>
+    <group>sysmon,attack,credential_access,mimikatz,</group>
+  </rule>
+
+  <!-- ============================================================
+       EVENT ID 11 — FileCreate
+       ============================================================ -->
+
+  <rule id="100114" level="8">
+    <if_sid>100100</if_sid>
+    <field name="data.win.system.eventID">^11$</field>
+    <field name="data.win.eventdata.targetFilename" type="pcre2">(?i)\\(Temp|AppData\\\\Local\\\\Temp|ProgramData|Users\\\\Public)\\\\[^\\\\]+\.(exe|dll|scr|bat|cmd|ps1|vbs|js|hta|jar|lnk)$</field>
+    <description>Sysmon EID11: Executable/script dropped in temp/public path — $(data.win.eventdata.targetFilename)</description>
+    <mitre>
+      <id>T1105</id>
+      <id>T1027</id>
+    </mitre>
+    <group>sysmon,attack,defense_evasion,command_and_control,</group>
+  </rule>
+
+  <rule id="100115" level="10">
+    <if_sid>100100</if_sid>
+    <field name="data.win.system.eventID">^11$</field>
+    <field name="data.win.eventdata.image" type="pcre2">(?i)\\(winword|excel|powerpnt|outlook|msaccess|mspub|visio|onenote)\.exe</field>
+    <field name="data.win.eventdata.targetFilename" type="pcre2">(?i)\.(exe|dll|scr|bat|cmd|ps1|vbs|js|hta|jar|lnk)$</field>
+    <description>Sysmon EID11: Office app wrote executable — $(data.win.eventdata.image) → $(data.win.eventdata.targetFilename)</description>
+    <mitre>
+      <id>T1566.001</id>
+      <id>T1105</id>
+    </mitre>
+    <group>sysmon,attack,initial_access,execution,</group>
+  </rule>
+
+  <rule id="100116" level="8">
+    <if_sid>100100</if_sid>
+    <field name="data.win.system.eventID">^11$</field>
+    <field name="data.win.eventdata.targetFilename" type="pcre2">(?i)\\(Start Menu\\\\Programs\\\\Startup|Microsoft\\\\Windows\\\\Start Menu\\\\Programs\\\\Startup)\\\\</field>
+    <description>Sysmon EID11: File created in Startup folder — $(data.win.eventdata.targetFilename)</description>
+    <mitre>
+      <id>T1547.001</id>
+    </mitre>
+    <group>sysmon,attack,persistence,</group>
+  </rule>
+
+  <!-- ============================================================
+       EVENT ID 12 / 13 — Registry persistence
+       ============================================================ -->
+
+  <rule id="100117" level="8">
+    <if_sid>100100</if_sid>
+    <field name="data.win.system.eventID" type="pcre2">^(12|13|14)$</field>
+    <field name="data.win.eventdata.targetObject" type="pcre2">(?i)\\Software\\\\(Microsoft\\\\Windows\\\\CurrentVersion\\\\)?(Run|RunOnce|RunOnceEx|RunServices|RunServicesOnce|Explorer\\\\Shell Folders|Policies\\\\Explorer\\\\Run|Winlogon\\\\Userinit|Winlogon\\\\Shell|Image File Execution Options\\\\.*\\\\Debugger)</field>
+    <description>Sysmon EID12/13: Autorun/persistence registry key modified — $(data.win.eventdata.targetObject)</description>
+    <mitre>
+      <id>T1547.001</id>
+      <id>T1546.012</id>
+    </mitre>
+    <group>sysmon,attack,persistence,privilege_escalation,</group>
+  </rule>
+
+  <!-- ============================================================
+       EVENT ID 15 — FileCreateStreamHash (Alternate Data Streams)
+       ============================================================ -->
+
+  <rule id="100118" level="6">
+    <if_sid>100100</if_sid>
+    <field name="data.win.system.eventID">^15$</field>
+    <field name="data.win.eventdata.targetFilename" type="pcre2">(?i):Zone\.Identifier$</field>
+    <description>Sysmon EID15: Zone.Identifier ADS set — downloaded file $(data.win.eventdata.targetFilename)</description>
+    <mitre>
+      <id>T1564.004</id>
+    </mitre>
+    <group>sysmon,attack,defense_evasion,</group>
+  </rule>
+
+  <rule id="100126" level="10">
+    <if_sid>100100</if_sid>
+    <field name="data.win.system.eventID">^15$</field>
+    <field name="data.win.eventdata.targetFilename" type="pcre2">(?i)\.(exe|dll|scr|bat|cmd|ps1|vbs|js|hta):[^Z]</field>
+    <description>Sysmon EID15: Executable with non-standard ADS — $(data.win.eventdata.targetFilename)</description>
+    <mitre>
+      <id>T1564.004</id>
+    </mitre>
+    <group>sysmon,attack,defense_evasion,</group>
+  </rule>
+
+  <!-- ============================================================
+       EVENT ID 17 / 18 — Named pipe events (C2 frameworks)
+       ============================================================ -->
+
+  <rule id="100119" level="10">
+    <if_sid>100100</if_sid>
+    <field name="data.win.system.eventID" type="pcre2">^(17|18)$</field>
+    <field name="data.win.eventdata.pipeName" type="pcre2">(?i)\\(msagent_[0-9a-f]{2}|MSSE-[0-9a-f]{3,4}-server|status_[0-9]{2}|postex_(default|ssh)|mojo\.[0-9]+\.[0-9]+\.[0-9]+|f53f[0-9a-f]{4}|wkssvc[a-z]{1,4}|ntsvcs[a-z]{1,4})$</field>
+    <description>Sysmon EID17/18: Cobalt Strike default pipe name — $(data.win.eventdata.pipeName)</description>
+    <mitre>
+      <id>T1071</id>
+      <id>T1573</id>
+    </mitre>
+    <group>sysmon,attack,command_and_control,cobaltstrike,</group>
+  </rule>
+
+  <rule id="100120" level="10">
+    <if_sid>100100</if_sid>
+    <field name="data.win.system.eventID" type="pcre2">^(17|18)$</field>
+    <field name="data.win.eventdata.pipeName" type="pcre2">(?i)\\(lsarpc_[a-f0-9]+|samr_[a-f0-9]+|atsvc_[a-f0-9]+|epmapper_[a-f0-9]+|browser_[a-f0-9]+|spoolss_[a-f0-9]+)$</field>
+    <description>Sysmon EID17/18: Metasploit-style named pipe — $(data.win.eventdata.pipeName)</description>
+    <mitre>
+      <id>T1071</id>
+    </mitre>
+    <group>sysmon,attack,command_and_control,metasploit,</group>
+  </rule>
+
+  <!-- ============================================================
+       EVENT ID 22 — DNS Query
+       ============================================================ -->
+
+  <rule id="100121" level="10">
+    <if_sid>100100</if_sid>
+    <field name="data.win.system.eventID">^22$</field>
+    <field name="data.win.eventdata.queryName" type="pcre2">^[a-z0-9]{20,}\.[a-z]{2,10}$</field>
+    <description>Sysmon EID22: DGA-style long random domain queried — $(data.win.eventdata.queryName)</description>
+    <mitre>
+      <id>T1568.002</id>
+      <id>T1071.004</id>
+    </mitre>
+    <group>sysmon,attack,command_and_control,</group>
+  </rule>
+
+  <rule id="100122" level="6">
+    <if_sid>100100</if_sid>
+    <field name="data.win.system.eventID">^22$</field>
+    <field name="data.win.eventdata.queryName" type="pcre2">(?i)\.(tk|gq|ml|cf|ga|top|xyz|click|country|stream|gdn|mom|bid|review|trade|cricket|date|loan|men|win|work|party|kim|science|racing)$</field>
+    <description>Sysmon EID22: DNS query to high-risk TLD — $(data.win.eventdata.queryName)</description>
+    <mitre>
+      <id>T1568</id>
+      <id>T1071.004</id>
+    </mitre>
+    <group>sysmon,attack,command_and_control,</group>
+  </rule>
+
+  <rule id="100127" level="10">
+    <if_sid>100100</if_sid>
+    <field name="data.win.system.eventID">^22$</field>
+    <field name="data.win.eventdata.image" type="pcre2">(?i)\\(powershell|pwsh|wscript|cscript|mshta|bitsadmin|certutil|regsvr32|rundll32|notepad|calc)\.exe</field>
+    <description>Sysmon EID22: Suspicious process performing DNS query — $(data.win.eventdata.image) → $(data.win.eventdata.queryName)</description>
+    <mitre>
+      <id>T1071.004</id>
+      <id>T1059.001</id>
+    </mitre>
+    <group>sysmon,attack,command_and_control,</group>
+  </rule>
+
+  <!-- ============================================================
+       EVENT ID 25 — ProcessTampering (always suspicious)
+       ============================================================ -->
+
+  <rule id="100123" level="12">
+    <if_sid>100100</if_sid>
+    <field name="data.win.system.eventID">^25$</field>
+    <description>Sysmon EID25: Process tampering / hollowing detected — $(data.win.eventdata.image) ($(data.win.eventdata.type))</description>
+    <mitre>
+      <id>T1055.012</id>
+      <id>T1036</id>
+    </mitre>
+    <group>sysmon,attack,defense_evasion,privilege_escalation,</group>
+  </rule>
+
+</group>
